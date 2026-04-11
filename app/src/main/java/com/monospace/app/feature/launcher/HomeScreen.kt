@@ -98,13 +98,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monospace.app.R
-import com.monospace.app.core.data.Task
+import com.monospace.app.core.database.entity.Task
 
+@Composable
+fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
+
+    when (val state = uiState) {
+        is HomeUiState.Loading -> LoadingScreen()
+        is HomeUiState.Error -> ErrorScreen(state.message)
+        is HomeUiState.Success -> HomeScreenContent(
+            state = state,
+            taskTitle = vm.newTaskTitle,
+            onTitleChange = vm::onNewTaskTitleChange,
+            onTaskToggle = vm::onTaskToggle,
+            onCreateTask = vm::onCreateTask
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+private fun HomeScreenContent() {
     var isSelectedMode by remember { mutableStateOf(false) }
     var isMenuExpanded by remember { mutableStateOf(false) }
     var showCreateSheet by remember { mutableStateOf(false) }

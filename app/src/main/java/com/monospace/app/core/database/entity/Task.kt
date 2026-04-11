@@ -1,4 +1,4 @@
-package com.monospace.app.core.data
+package com.monospace.app.core.database.entity
 
 import java.util.UUID
 
