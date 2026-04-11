@@ -3,7 +3,7 @@ package com.monospace.app.feature.launcher
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monospace.app.core.database.entity.Task
+import com.monospace.app.core.database.entity.TaskEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,7 +40,7 @@ class HomeViewModel @Inject constructor(
     fun onCreateTask() {
         if (newTaskTitle.isBlank()) return
         viewModelScope.launch {
-            taskRepo.createTask(Task(title = newTaskTitle, listId = "inbox"))
+            taskRepo.createTask(TaskEntity(title = newTaskTitle, listId = "inbox"))
             newTaskTitle = ""  // Clear sau khi save
         }
     }

@@ -100,7 +100,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monospace.app.R
-import com.monospace.app.core.database.entity.Task
+import com.monospace.app.core.database.entity.TaskEntity
 
 @Composable
 fun HomeScreen(vm: HomeViewModel = hiltViewModel()) {
@@ -129,11 +129,11 @@ private fun HomeScreenContent() {
 
     val tasks = remember {
         mutableStateListOf(
-            Task(title = "Thiết kế UI cho Monospace", category = "Design"),
-            Task(title = "Kết nối API Notion", category = "Coding"),
-            Task(title = "Mua cà phê cho Team", category = "Personal", isCompleted = true),
-            Task(title = "Họp review với Senior Architect", category = "Work"),
-            Task(title = "Tối ưu hóa Docker Image", category = "DevOps")
+            TaskEntity(title = "Thiết kế UI cho Monospace", category = "Design"),
+            TaskEntity(title = "Kết nối API Notion", category = "Coding"),
+            TaskEntity(title = "Mua cà phê cho Team", category = "Personal", isCompleted = true),
+            TaskEntity(title = "Họp review với Senior Architect", category = "Work"),
+            TaskEntity(title = "Tối ưu hóa Docker Image", category = "DevOps")
         )
     }
     val activeTasks by remember { derivedStateOf { tasks.filter { !it.isCompleted } } }
@@ -549,8 +549,8 @@ fun TaskOptionChip(icon: ImageVector, label: String?, onClick: () -> Unit) {
 
 @Composable
 fun TaskList(
-    activeTasks: List<Task>,
-    completedTasks: List<Task>,
+    activeTasks: List<TaskEntity>,
+    completedTasks: List<TaskEntity>,
     onTaskToggle: (String, Boolean) -> Unit
 ) {
     LazyColumn(
@@ -611,7 +611,7 @@ fun TaskList(
 
 @Composable
 fun TaskItem(
-    task: Task,
+    task: TaskEntity,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
