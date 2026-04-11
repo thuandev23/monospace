@@ -28,4 +28,11 @@ interface TaskDao {
     // Hard delete: Xóa thật sau khi server đã confirm
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun hardDelete(id: String)
+
+    @Query("UPDATE tasks SET is_completed = :isCompleted, updated_at = :now WHERE id = :id")
+    suspend fun updateCompletionStatus(
+        id: String,
+        isCompleted: Boolean,
+        now: Long = System.currentTimeMillis()
+    )
 }

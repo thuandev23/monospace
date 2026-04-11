@@ -28,9 +28,7 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean) {
-        // Trong thực tế, bạn sẽ lấy task lên, đổi trạng thái và lưu lại
-        // Ở đây ta có thể viết thêm 1 hàm update trong DAO, nhưng tạm thời dùng cách này
-        // (Chúng ta sẽ tối ưu sau nếu cần)
+        taskDao.updateCompletionStatus(taskId, isCompleted)
     }
 
     override suspend fun deleteTask(taskId: String) {
