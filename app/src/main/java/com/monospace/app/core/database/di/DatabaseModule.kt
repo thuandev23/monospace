@@ -42,6 +42,4 @@ object DatabaseModule {
 
     @Provides
     fun provideSyncQueueDao(database: FocusDatabase): SyncQueueDao = database.syncQueueDao()
-
-
 }

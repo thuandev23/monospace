@@ -1,8 +1,11 @@
 package com.monospace.app.feature.launcher.state
 
+import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.domain.model.AppInfo
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.repository.AppRepository
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.AddTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
@@ -19,8 +22,23 @@ class LauncherViewModel @Inject constructor(
     private val getTasksUseCase: GetTasksUseCase,
     private val addTaskUseCase: AddTaskUseCase,
     private val toggleTaskUseCase: ToggleTaskUseCase,
-    private val repository: TaskRepository
+    private val repository: TaskRepository,
+    private val appRepository: AppRepository
 ) : ViewModel() {
+    val apps = mutableStateListOf<AppInfo>()
+
+    init {
+        loadApps()
+    }
+
+    private fun loadApps() {
+        apps.clear()
+        apps.addAll(appRepository.getInstalledApps())
+    }
+
+    fun launchApp(packageName: String) {
+        appRepository.launchApp(packageName)
+    }
 
     // Lấy danh sách task từ list mặc định (ví dụ ID là "default")
     val uiState: StateFlow<List<Task>> = getTasksUseCase("default")
