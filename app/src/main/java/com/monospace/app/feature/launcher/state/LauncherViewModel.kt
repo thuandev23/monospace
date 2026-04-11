@@ -11,8 +11,11 @@ import com.monospace.app.core.domain.usecase.AddTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,6 +29,8 @@ class LauncherViewModel @Inject constructor(
     private val appRepository: AppRepository
 ) : ViewModel() {
     val apps = mutableStateListOf<AppInfo>()
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
 
     init {
         loadApps()
@@ -66,5 +71,20 @@ class LauncherViewModel @Inject constructor(
         viewModelScope.launch {
             repository.deleteTask(taskId)
         }
+    }
+
+    val filteredApps = combine(
+        _searchQuery,
+        MutableStateFlow(appRepository.getInstalledApps())
+    ) { query, allApps ->
+        if (query.isBlank()) {
+            allApps // Hoặc emptyList() nếu bạn muốn ẩn app khi chưa search
+        } else {
+            allApps.filter { it.name.contains(query, ignoreCase = true) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun onSearchQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
     }
 }
