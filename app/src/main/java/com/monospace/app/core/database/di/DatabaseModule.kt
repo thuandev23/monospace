@@ -21,15 +21,14 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideFocusDatabase(@ApplicationContext context: Context): FocusDatabase {
-        return Room.databaseBuilder(
+        // Chuyển sang inMemoryDatabaseBuilder theo yêu cầu
+        return Room.inMemoryDatabaseBuilder(
             context,
-            FocusDatabase::class.java,
-            "monospace.db"
+            FocusDatabase::class.java
         )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
-                    // Chèn list mặc định khi DB được tạo lần đầu
                     db.execSQL("INSERT INTO lists (id, name, sync_status, created_at, updated_at) VALUES ('default', 'My Tasks', 'synced', 0, 0)")
                 }
             })
