@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">MONOSPACE</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_select_all">Select All</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+    <string name="label_today">Today</string>
+    <string name="label_inbox">Inbox</string>
+    <string name="label_deadline">Deadline</string>
+    <string name="msg_no_tasks">No tasks found</string>
+    <string name="action_create_task">Create new task</string>
+    <string name="hint_task_title">Task title</string>
+    <string name="content_desc_add_task">Add Task</string>
+    <string name="content_desc_menu">Menu</string>
 </resources>

@@ -1,6 +1,5 @@
 package com.monospace.app.feature.launcher.state
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.AppInfo
@@ -11,14 +10,25 @@ import com.monospace.app.core.domain.usecase.AddTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class LauncherUiState(
+    val tasks: List<Task> = emptyList(),
+    val isLoading: Boolean = false,
+    val isSelectionMode: Boolean = false,
+    val selectedTaskIds: Set<String> = emptySet(),
+    val searchQuery: String = "",
+    val error: String? = null
+)
 
 @HiltViewModel
 class LauncherViewModel @Inject constructor(
@@ -28,42 +38,72 @@ class LauncherViewModel @Inject constructor(
     private val repository: TaskRepository,
     private val appRepository: AppRepository
 ) : ViewModel() {
-    val apps = mutableStateListOf<AppInfo>()
+
+    private val _currentListId = MutableStateFlow("default")
+    private val _isSelectionMode = MutableStateFlow(false)
+    private val _selectedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
+    private val _isLoading = MutableStateFlow(false)
 
-    init {
-        loadApps()
-    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<LauncherUiState> = combine(
+        _currentListId.flatMapLatest { id -> getTasksUseCase(id) },
+        _isSelectionMode,
+        _selectedTaskIds,
+        _searchQuery,
+        _isLoading
+    ) { tasks, isSelectionMode, selectedIds, query, loading ->
+        LauncherUiState(
+            tasks = tasks,
+            isSelectionMode = isSelectionMode,
+            selectedTaskIds = selectedIds,
+            searchQuery = query,
+            isLoading = loading
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = LauncherUiState(isLoading = true)
+    )
 
-    private fun loadApps() {
-        apps.clear()
-        apps.addAll(appRepository.getInstalledApps())
+    val filteredApps = combine(
+        _searchQuery,
+        MutableStateFlow(appRepository.getInstalledApps())
+    ) { query, allApps ->
+        if (query.isBlank()) allApps else allApps.filter { it.name.contains(query, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun onSearchQueryChange(newQuery: String) {
+        _searchQuery.value = newQuery
     }
 
     fun launchApp(packageName: String) {
         appRepository.launchApp(packageName)
     }
 
-    // Lấy danh sách task từ list mặc định (ví dụ ID là "default")
-    val uiState: StateFlow<List<Task>> = getTasksUseCase("default")
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     fun addTask(title: String) {
+        if (title.isBlank()) return
         viewModelScope.launch {
-            if (title.isNotBlank()) {
-                addTaskUseCase(title, "default")
+            try {
+                addTaskUseCase(title, _currentListId.value)
+            } catch (e: Exception) {
+                // Log error
             }
         }
     }
 
-    fun toggleTask(taskId: String, currentStatus: Boolean) {
+    /**
+     * Cập nhật trạng thái hoàn thành của task.
+     * @param taskId ID của task.
+     * @param isCompleted Trạng thái hoàn thành mới.
+     */
+    fun toggleTask(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            toggleTaskUseCase(taskId, currentStatus)
+            try {
+                toggleTaskUseCase(taskId, isCompleted)
+            } catch (e: Exception) {
+                // Log error
+            }
         }
     }
 
@@ -73,18 +113,26 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
-    val filteredApps = combine(
-        _searchQuery,
-        MutableStateFlow(appRepository.getInstalledApps())
-    ) { query, allApps ->
-        if (query.isBlank()) {
-            allApps // Hoặc emptyList() nếu bạn muốn ẩn app khi chưa search
-        } else {
-            allApps.filter { it.name.contains(query, ignoreCase = true) }
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun setSelectionMode(enabled: Boolean) {
+        _isSelectionMode.value = enabled
+        if (!enabled) _selectedTaskIds.value = emptySet()
+    }
 
-    fun onSearchQueryChange(newQuery: String) {
-        _searchQuery.value = newQuery
+    fun toggleTaskSelection(taskId: String) {
+        val currentSelected = _selectedTaskIds.value
+        _selectedTaskIds.value = if (currentSelected.contains(taskId)) {
+            currentSelected - taskId
+        } else {
+            currentSelected + taskId
+        }
+    }
+    
+    fun deleteSelectedTasks() {
+        viewModelScope.launch {
+            _selectedTaskIds.value.forEach { id ->
+                repository.deleteTask(id)
+            }
+            setSelectionMode(false)
+        }
     }
 }
