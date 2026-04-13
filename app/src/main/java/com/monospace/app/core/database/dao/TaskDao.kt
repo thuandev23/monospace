@@ -29,10 +29,16 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun hardDelete(id: String)
 
-    @Query("UPDATE tasks SET is_completed = :isCompleted, updated_at = :now WHERE id = :id")
+    @Query("UPDATE tasks SET is_completed = :isCompleted, sync_status = 'pending_update', updated_at = :now WHERE id = :id")
     suspend fun updateCompletionStatus(
         id: String,
         isCompleted: Boolean,
         now: Long = System.currentTimeMillis()
     )
+
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    suspend fun getTaskById(id: String): TaskEntity?
+
+    @Query("UPDATE tasks SET sync_status = 'synced' WHERE id = :id")
+    suspend fun markAsSynced(id: String)
 }

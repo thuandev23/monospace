@@ -14,11 +14,11 @@ class AddTaskUseCase @Inject constructor(
         // 1. Lưu vào Local DB (Optimistic UI)
         repository.saveTask(task)
 
-        // 2. Đưa vào hàng đợi để đồng bộ
+        // 2. Enqueue — SyncWorker sẽ tự đọc TaskEntity từ DB để gửi lên server
         syncQueue.enqueue(
             taskId = task.id,
             operation = SyncOperationType.CREATE,
-            payload = task.title
+            payload = task.id // SyncWorker query task từ DB theo ID, không cần serialize ở đây
         )
     }
 }

@@ -5,19 +5,18 @@ import com.monospace.app.core.domain.repository.SyncQueue
 import com.monospace.app.core.domain.repository.TaskRepository
 import javax.inject.Inject
 
-class ToggleTaskUseCase @Inject constructor(
+class DeleteTaskUseCase @Inject constructor(
     private val repository: TaskRepository,
     private val syncQueue: SyncQueue
 ) {
+    suspend operator fun invoke(taskId: String) {
+        // 1. Soft delete local (đánh dấu pending_delete)
+        repository.deleteTask(taskId)
 
-    suspend operator fun invoke(taskId: String, isCompleted: Boolean) {
-        // 1. Cập nhật local (sync_status tự động đổi thành pending_update trong DAO)
-        repository.markTaskCompleted(taskId, isCompleted)
-
-        // 2. Enqueue để SyncWorker push lên server
+        // 2. Enqueue để SyncWorker xóa trên server
         syncQueue.enqueue(
             taskId = taskId,
-            operation = SyncOperationType.UPDATE,
+            operation = SyncOperationType.DELETE,
             payload = taskId
         )
     }
