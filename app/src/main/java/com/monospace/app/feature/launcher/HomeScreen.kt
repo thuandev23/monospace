@@ -26,6 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.ReminderConfig
+import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.feature.launcher.components.CreateTaskSheet
 import com.monospace.app.feature.launcher.components.EmptyStateTask
 import com.monospace.app.feature.launcher.components.HomeTopBar
@@ -34,6 +36,9 @@ import com.monospace.app.feature.launcher.components.TaskList
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
 import com.monospace.app.ui.theme.FocusTheme
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 @Composable
 fun HomeScreen(
@@ -50,7 +55,9 @@ fun HomeScreen(
         onToggleTaskSelection = viewModel::toggleTaskSelection,
         onMenuToggle = viewModel::setMenuExpanded,
         onShowCreateSheet = viewModel::setShowCreateSheet,
-        onShowDatePicker = viewModel::setShowDatePicker
+        onShowDatePicker = viewModel::setShowDatePicker,
+        onUpdateDraftSchedule = viewModel::updateDraftSchedule,
+        onUpdateDraftListId = viewModel::setDraftListId
     )
 }
 
@@ -64,7 +71,9 @@ fun HomeScreenContent(
     onToggleTaskSelection: (String) -> Unit,
     onMenuToggle: (Boolean) -> Unit,
     onShowCreateSheet: (Boolean) -> Unit,
-    onShowDatePicker: (Boolean) -> Unit
+    onShowDatePicker: (Boolean) -> Unit,
+    onUpdateDraftSchedule: (startDate: java.time.Instant?, endDate: java.time.Instant?, isAllDay: Boolean, reminder: ReminderConfig?, repeat: RepeatConfig?) -> Unit,
+    onUpdateDraftListId: (String) -> Unit
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -124,14 +133,30 @@ fun HomeScreenContent(
                         CreateTaskSheet(
                             onDismiss = { onShowCreateSheet(false) },
                             onSave = onAddTask,
-                            onTodayClick = { onShowDatePicker(true) }
+                            onTodayClick = { onShowDatePicker(true) },
+                            availableLists = uiState.availableLists,
+                            currentListId = uiState.draftListId,
+                            onListSelected = onUpdateDraftListId
                         )
                     }
 
                     if (uiState.showDatePicker) {
                         MinimalCalendarDialog(
                             onDismiss = { onShowDatePicker(false) },
-                            onDateSelected = { /* TODO */ }
+                            onConfigSave = { startD, startT, endD, endT, rem, rep ->
+                                val startInstant = startD.atTime(startT ?: LocalTime.MIDNIGHT)
+                                    .atZone(ZoneId.systemDefault()).toInstant()
+                                val endInstant = endD?.atTime(endT ?: LocalTime.MAX)
+                                    ?.atZone(ZoneId.systemDefault())?.toInstant()
+                                
+                                onUpdateDraftSchedule(
+                                    startInstant,
+                                    endInstant,
+                                    startT == null,
+                                    rem,
+                                    rep
+                                )
+                            }
                         )
                     }
                 }

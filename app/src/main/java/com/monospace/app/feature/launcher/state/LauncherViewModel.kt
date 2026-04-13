@@ -3,6 +3,8 @@ package com.monospace.app.feature.launcher.state
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.AppInfo
+import com.monospace.app.core.domain.model.Priority
+import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.repository.AppRepository
 import com.monospace.app.core.domain.repository.TaskRepository
@@ -14,11 +16,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 data class LauncherUiState(
@@ -85,18 +87,23 @@ class LauncherViewModel @Inject constructor(
         if (title.isBlank()) return
         viewModelScope.launch {
             try {
-                addTaskUseCase(title, _currentListId.value)
+                val task = Task(
+                    id = UUID.randomUUID().toString(),
+                    title = title,
+                    listId = _currentListId.value,
+                    syncStatus = SyncStatus.PENDING_CREATE,
+                    priority = Priority.NONE,
+                    startDateTime = null,
+                    endDateTime = null,
+                    isAllDay = true
+                )
+                addTaskUseCase(task)
             } catch (e: Exception) {
                 // Log error
             }
         }
     }
 
-    /**
-     * Cập nhật trạng thái hoàn thành của task.
-     * @param taskId ID của task.
-     * @param isCompleted Trạng thái hoàn thành mới.
-     */
     fun toggleTask(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
             try {

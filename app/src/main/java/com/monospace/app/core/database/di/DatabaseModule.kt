@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.monospace.app.core.database.FocusDatabase
 import com.monospace.app.core.database.dao.SyncQueueDao
 import com.monospace.app.core.database.dao.TaskDao
+import com.monospace.app.core.database.dao.TaskListDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,6 +39,9 @@ object DatabaseModule {
 
     @Provides
     fun provideTaskDao(database: FocusDatabase): TaskDao = database.taskDao()
+
+    @Provides
+    fun provideTaskListDao(database: FocusDatabase): TaskListDao = database.taskListDao()
 
     @Provides
     fun provideSyncQueueDao(database: FocusDatabase): SyncQueueDao = database.syncQueueDao()

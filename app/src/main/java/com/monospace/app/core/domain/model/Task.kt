@@ -1,17 +1,44 @@
 package com.monospace.app.core.domain.model
 
-import java.time.LocalDate
+import java.time.Instant
+import java.time.LocalTime
 
 data class Task(
     val id: String,
     val title: String,
-    val notes: String?,
-    val isCompleted: Boolean,
-    val dueDate: LocalDate?,
-    val priority: Priority,
-    val listId: String,
-    val syncStatus: SyncStatus
+    val notes: String? = null,
+    val isCompleted: Boolean = false,
+    val listId: String = "default",
+    val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
+    val priority: Priority = Priority.NONE,
+
+    // Schedule Data (Timezone aware via Instant)
+    val startDateTime: Instant?,
+    val endDateTime: Instant?,
+    val isAllDay: Boolean = true,
+
+    // Reminder Logic
+    val reminder: ReminderConfig? = null,
+
+    // Repeat Logic
+    val repeat: RepeatConfig? = null
 )
+
+data class ReminderConfig(
+    val value: Int,
+    val unit: ReminderUnit,
+    val remindTime: LocalTime
+)
+
+enum class ReminderUnit { MINUTE, HOUR, DAY, WEEK }
+
+data class RepeatConfig(
+    val interval: Int,
+    val unit: RepeatUnit,
+    val daysOfWeek: Set<Int>? = null // 1 (Mon) to 7 (Sun)
+)
+
+enum class RepeatUnit { DAY, WEEK, MONTH, YEAR }
 
 enum class Priority(val value: Int) {
     NONE(0), LOW(1), MEDIUM(2), HIGH(3)

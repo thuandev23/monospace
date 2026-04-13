@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -37,9 +41,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.monospace.app.R
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.ui.theme.FocusTheme
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun TaskList(
@@ -115,26 +123,90 @@ fun TaskItem(
                 }
             )
             .padding(vertical = 12.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         CircularCheckbox(
             checked = if (isSelectionMode) isSelected else task.isCompleted,
             onCheckedChange = { 
                 if (isSelectionMode) onClick() else onToggle(it)
-            }
+            },
+            modifier = Modifier.padding(top = 2.dp)
         )
 
         Spacer(modifier = Modifier.width(16.dp))
 
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = task.title,
+                style = FocusTheme.typography.headline.copy(
+                    color = if (task.isCompleted) FocusTheme.colors.secondary else FocusTheme.colors.primary,
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                )
+            )
+            
+            // Dòng thông tin bổ sung: Ngày giờ, Nhắc nhở, Lặp lại
+            if (!task.isCompleted) {
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Hiển thị Ngày/Giờ
+                    task.startDateTime?.let {
+                        InfoTag(
+                            icon = Icons.Default.Schedule,
+                            text = formatInstant(it, task.isAllDay)
+                        )
+                    }
+                    
+                    // Hiển thị Nhắc nhở
+                    task.reminder?.let {
+                        InfoTag(
+                            icon = Icons.Default.Notifications,
+                            text = "${it.value} ${it.unit.name.lowercase()}"
+                        )
+                    }
+                    
+                    // Hiển thị Lặp lại
+                    task.repeat?.let {
+                        InfoTag(
+                            icon = Icons.Default.Repeat,
+                            text = it.unit.name.lowercase()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoTag(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = FocusTheme.colors.secondary
+        )
+        Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = task.title,
-            style = FocusTheme.typography.headline.copy(
-                color = if (task.isCompleted) FocusTheme.colors.secondary else FocusTheme.colors.primary,
-                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-            ),
-            modifier = Modifier.weight(1f)
+            text = text,
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 11.sp
+            )
         )
     }
+}
+
+private fun formatInstant(instant: Instant, isAllDay: Boolean): String {
+    val formatter = if (isAllDay) {
+        DateTimeFormatter.ofPattern("d MMM").withZone(ZoneId.systemDefault())
+    } else {
+        DateTimeFormatter.ofPattern("d MMM, HH:mm").withZone(ZoneId.systemDefault())
+    }
+    return formatter.format(instant)
 }
 
 @Composable

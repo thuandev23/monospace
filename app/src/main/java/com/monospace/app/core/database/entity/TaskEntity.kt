@@ -30,11 +30,26 @@ data class TaskEntity(
     val title: String,
     val notes: String? = null,
     @ColumnInfo(name = "is_completed") val isCompleted: Boolean = false,
-    @ColumnInfo(name = "due_date") val dueDate: Long? = null,
     val priority: Int = 0,
     @ColumnInfo(name = "parent_task_id") val parentTaskId: String? = null,
     @ColumnInfo(name = "list_id") val listId: String,
-    @ColumnInfo(name = "sync_status") val syncStatus: String = "synced",
+    @ColumnInfo(name = "sync_status") val syncStatus: String = "pending_create",
+    
+    // Scheduled Time (Stored as Long epoch millis)
+    @ColumnInfo(name = "start_date_time") val startDateTime: Long? = null,
+    @ColumnInfo(name = "end_date_time") val endDateTime: Long? = null,
+    @ColumnInfo(name = "is_all_day") val isAllDay: Boolean = true,
+    
+    // Flattened Reminder Config
+    @ColumnInfo(name = "reminder_value") val reminderValue: Int? = null,
+    @ColumnInfo(name = "reminder_unit") val reminderUnit: String? = null,
+    @ColumnInfo(name = "reminder_time") val reminderTime: String? = null, // "HH:mm"
+    
+    // Flattened Repeat Config
+    @ColumnInfo(name = "repeat_interval") val repeatInterval: Int? = null,
+    @ColumnInfo(name = "repeat_unit") val repeatUnit: String? = null,
+    @ColumnInfo(name = "repeat_days_of_week") val repeatDaysOfWeek: String? = null, // "1,2,3"
+    
     val checksum: String? = null,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),

@@ -30,6 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -50,6 +54,8 @@ fun HomeTopBar(
     onMenuToggle: (Boolean) -> Unit,
     onSelectedTasks: () -> Unit
 ) {
+    var showViewOptions by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -99,7 +105,11 @@ fun HomeTopBar(
                     MonospaceDropdownMenu(
                         expanded = isMenuExpanded,
                         onDismiss = { onMenuToggle(false) },
-                        onSelectedTasks = onSelectedTasks
+                        onSelectedTasks = onSelectedTasks,
+                        onViewOptionsClick = {
+                            onMenuToggle(false)
+                            showViewOptions = true
+                        }
                     )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,13 +159,18 @@ fun HomeTopBar(
             }
         }
     }
+
+    if (showViewOptions) {
+        ViewOptionsBottomSheet(onDismiss = { showViewOptions = false })
+    }
 }
 
 @Composable
 fun MonospaceDropdownMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
-    onSelectedTasks: () -> Unit
+    onSelectedTasks: () -> Unit,
+    onViewOptionsClick: () -> Unit
 ) {
     MaterialTheme(
         shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(20.dp))
@@ -183,7 +198,7 @@ fun MonospaceDropdownMenu(
                         tint = FocusTheme.colors.primary
                     )
                 },
-                onClick = { onDismiss() }
+                onClick = onViewOptionsClick
             )
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 12.dp),

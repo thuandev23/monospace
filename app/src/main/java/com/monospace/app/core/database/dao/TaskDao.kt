@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     // Flow giúp UI tự động cập nhật khi data trong database thay đổi
-    @Query("SELECT * FROM tasks WHERE list_id = :listId AND sync_status != 'pending_delete' ORDER BY is_completed ASC, priority DESC, due_date ASC")
+    @Query("SELECT * FROM tasks WHERE list_id = :listId AND sync_status != 'pending_delete' ORDER BY is_completed ASC, priority DESC, start_date_time ASC")
     fun observeTasksByList(listId: String): Flow<List<TaskEntity>>
 
     // Lấy các task đang chờ đồng bộ lên server
