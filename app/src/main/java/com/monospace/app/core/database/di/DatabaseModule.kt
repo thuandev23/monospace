@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.monospace.app.R
 import com.monospace.app.core.database.FocusDatabase
 import com.monospace.app.core.database.dao.SyncQueueDao
 import com.monospace.app.core.database.dao.TaskDao
@@ -19,18 +20,24 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private const val DATABASE_NAME = "monospace_focus_db"
+
     @Provides
     @Singleton
     fun provideFocusDatabase(@ApplicationContext context: Context): FocusDatabase {
-        // Chuyển sang inMemoryDatabaseBuilder theo yêu cầu
-        return Room.inMemoryDatabaseBuilder(
+        return Room.databaseBuilder(
             context,
-            FocusDatabase::class.java
+            FocusDatabase::class.java,
+            DATABASE_NAME
         )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
-                    db.execSQL("INSERT INTO lists (id, name, sync_status, created_at, updated_at) VALUES ('default', 'My Tasks', 'synced', 0, 0)")
+                    val defaultListName = context.getString(R.string.default_task_list_name)
+                    db.execSQL(
+                        "INSERT INTO lists (id, name, sync_status, created_at, updated_at) VALUES ('default', ?, 'synced', 0, 0)",
+                        arrayOf(defaultListName)
+                    )
                 }
             })
             .fallbackToDestructiveMigration()
@@ -38,11 +45,14 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
     fun provideTaskDao(database: FocusDatabase): TaskDao = database.taskDao()
 
     @Provides
+    @Singleton
     fun provideTaskListDao(database: FocusDatabase): TaskListDao = database.taskListDao()
 
     @Provides
+    @Singleton
     fun provideSyncQueueDao(database: FocusDatabase): SyncQueueDao = database.syncQueueDao()
 }
