@@ -1,5 +1,6 @@
 package com.monospace.app.feature.launcher.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,14 +24,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +56,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskList(
     activeTasks: List<Task>,
@@ -57,20 +65,23 @@ fun TaskList(
     selectedTaskIds: Set<String>,
     onTaskToggle: (String, Boolean) -> Unit,
     onTaskClick: (Task) -> Unit,
-    onTaskLongClick: (Task) -> Unit
+    onTaskLongClick: (Task) -> Unit,
+    onTaskSwipeDelete: (String) -> Unit = {}
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(bottom = 100.dp)
     ) {
         items(items = activeTasks, key = { it.id }) { task ->
-            TaskItem(
+            SwipeableTaskItem(
                 task = task,
                 isSelected = selectedTaskIds.contains(task.id),
                 isSelectionMode = isSelectionMode,
                 onToggle = { onTaskToggle(task.id, it) },
                 onClick = { onTaskClick(task) },
                 onLongClick = { onTaskLongClick(task) },
+                onSwipeComplete = { onTaskToggle(task.id, true) },
+                onSwipeDelete = { onTaskSwipeDelete(task.id) },
                 modifier = Modifier.animateItem()
             )
         }
@@ -86,16 +97,93 @@ fun TaskList(
         }
 
         items(items = completedTasks, key = { it.id }) { task ->
-            TaskItem(
+            SwipeableTaskItem(
                 task = task,
                 isSelected = selectedTaskIds.contains(task.id),
                 isSelectionMode = isSelectionMode,
                 onToggle = { onTaskToggle(task.id, it) },
                 onClick = { onTaskClick(task) },
                 onLongClick = { onTaskLongClick(task) },
+                onSwipeComplete = { onTaskToggle(task.id, false) },
+                onSwipeDelete = { onTaskSwipeDelete(task.id) },
                 modifier = Modifier.animateItem()
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeableTaskItem(
+    task: Task,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onSwipeComplete: () -> Unit,
+    onSwipeDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Không cho swipe khi đang ở selection mode
+    if (isSelectionMode) {
+        TaskItem(task, isSelected, isSelectionMode, onToggle, onClick, onLongClick, modifier)
+        return
+    }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { onSwipeComplete(); true }
+                SwipeToDismissBoxValue.EndToStart -> { onSwipeDelete(); true }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        },
+        positionalThreshold = { it * 0.4f }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val bgColor by animateColorAsState(
+                when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> FocusTheme.colors.success.copy(alpha = 0.15f)
+                    SwipeToDismissBoxValue.EndToStart -> FocusTheme.colors.destructive.copy(alpha = 0.15f)
+                    else -> FocusTheme.colors.background
+                },
+                label = "swipe_bg"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 20.dp),
+                contentAlignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    else -> Alignment.CenterEnd
+                }
+            ) {
+                when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Icon(
+                        Icons.Default.Check,
+                        contentDescription = "Hoàn thành",
+                        tint = FocusTheme.colors.success,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    SwipeToDismissBoxValue.EndToStart -> Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Xóa",
+                        tint = FocusTheme.colors.destructive,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    else -> {}
+                }
+            }
+        }
+    ) {
+        TaskItem(task, isSelected, isSelectionMode, onToggle, onClick, onLongClick)
     }
 }
 

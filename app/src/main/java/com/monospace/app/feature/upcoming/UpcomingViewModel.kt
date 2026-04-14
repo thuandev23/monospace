@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.repository.TaskRepository
+import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,7 +41,8 @@ sealed interface UpcomingUiState {
 @HiltViewModel
 class UpcomingViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
-    private val toggleTaskUseCase: ToggleTaskUseCase
+    private val toggleTaskUseCase: ToggleTaskUseCase,
+    private val deleteTaskUseCase: DeleteTaskUseCase
 ) : ViewModel() {
 
     private val _showCompleted = MutableStateFlow(false)
@@ -74,6 +76,16 @@ class UpcomingViewModel @Inject constructor(
                 toggleTaskUseCase(taskId, isCompleted)
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể cập nhật: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteTask(taskId: String) {
+        viewModelScope.launch {
+            try {
+                deleteTaskUseCase(taskId)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể xóa task: ${e.message}")
             }
         }
     }

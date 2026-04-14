@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.monospace.app.feature.launcher.components.TaskItem
+import com.monospace.app.feature.launcher.components.SwipeableTaskItem
 import com.monospace.app.ui.theme.FocusTheme
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -145,13 +145,15 @@ fun UpcomingScreen(
                                 SectionHeader(label = group.label)
                             }
                             items(items = group.tasks, key = { it.id }) { task ->
-                                TaskItem(
+                                SwipeableTaskItem(
                                     task = task,
                                     isSelected = false,
                                     isSelectionMode = false,
                                     onToggle = { completed -> viewModel.toggleTask(task.id, completed) },
                                     onClick = { onNavigateToTask(task.id) },
                                     onLongClick = {},
+                                    onSwipeComplete = { viewModel.toggleTask(task.id, true) },
+                                    onSwipeDelete = { viewModel.deleteTask(task.id) },
                                     modifier = Modifier.animateItem()
                                 )
                             }
@@ -164,13 +166,15 @@ fun UpcomingScreen(
                                 )
                             }
                             items(items = state.completedTasks, key = { "done_${it.id}" }) { task ->
-                                TaskItem(
+                                SwipeableTaskItem(
                                     task = task,
                                     isSelected = false,
                                     isSelectionMode = false,
                                     onToggle = { completed -> viewModel.toggleTask(task.id, completed) },
                                     onClick = { onNavigateToTask(task.id) },
                                     onLongClick = {},
+                                    onSwipeComplete = { viewModel.toggleTask(task.id, false) },
+                                    onSwipeDelete = { viewModel.deleteTask(task.id) },
                                     modifier = Modifier.animateItem()
                                 )
                             }

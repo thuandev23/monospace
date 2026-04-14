@@ -38,6 +38,7 @@ sealed interface HomeUiState {
         val isSelectionMode: Boolean = false,
         val selectedTaskIds: Set<String> = emptySet(),
         val searchQuery: String = "",
+        val priorityFilter: Priority? = null,
         val isMenuExpanded: Boolean = false,
         val showCreateSheet: Boolean = false,
         val showDatePicker: Boolean = false,
@@ -75,6 +76,7 @@ class HomeViewModel @Inject constructor(
     private val _selectedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     private val _searchQuery = MutableStateFlow("")
 
+    private val _priorityFilter = MutableStateFlow<Priority?>(null)
     private val _isMenuExpanded = MutableStateFlow(false)
     private val _showCreateSheet = MutableStateFlow(false)
     private val _showDatePicker = MutableStateFlow(false)
@@ -88,7 +90,7 @@ class HomeViewModel @Inject constructor(
     private val _draftRepeat = MutableStateFlow<RepeatConfig?>(null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<HomeUiState> = combine(
+    private val _baseState = combine(
         _currentListId.flatMapLatest { id -> getTasksUseCase(id) },
         taskListRepository.observeAllLists(),
         _isSelectionMode,
@@ -107,13 +109,13 @@ class HomeViewModel @Inject constructor(
         @Suppress("UNCHECKED_CAST")
         val allTasks = args[0] as List<Task>
         val query = args[4] as String
-        val filteredTasks = if (query.isBlank()) allTasks
+        val searchFiltered = if (query.isBlank()) allTasks
         else allTasks.filter { task ->
             task.title.contains(query, ignoreCase = true) ||
                 task.notes?.contains(query, ignoreCase = true) == true
         }
         HomeUiState.Success(
-            tasks = filteredTasks,
+            tasks = searchFiltered,
             availableLists = args[1] as List<TaskList>,
             isSelectionMode = args[2] as Boolean,
             selectedTaskIds = args[3] as Set<String>,
@@ -128,6 +130,14 @@ class HomeViewModel @Inject constructor(
             draftReminder = args[12] as ReminderConfig?,
             draftRepeat = args[13] as RepeatConfig?
         )
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(_baseState, _priorityFilter) { state, filter ->
+        if (state is HomeUiState.Success) {
+            val filtered = if (filter != null) state.tasks.filter { it.priority == filter }
+                           else state.tasks
+            state.copy(tasks = filtered, priorityFilter = filter)
+        } else state
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -232,6 +242,20 @@ class HomeViewModel @Inject constructor(
     fun setMenuExpanded(expanded: Boolean) = run { _isMenuExpanded.value = expanded }
     fun setShowCreateSheet(show: Boolean) = run { _showCreateSheet.value = show }
     fun setShowDatePicker(show: Boolean) = run { _showDatePicker.value = show }
+
+    fun deleteTask(taskId: String) {
+        viewModelScope.launch {
+            try {
+                deleteTaskUseCase(taskId)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể xóa task: ${e.message}")
+            }
+        }
+    }
+
+    fun setPriorityFilter(priority: Priority?) {
+        _priorityFilter.value = if (_priorityFilter.value == priority) null else priority
+    }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 

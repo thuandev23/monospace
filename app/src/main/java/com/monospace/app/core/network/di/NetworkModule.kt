@@ -1,5 +1,7 @@
 package com.monospace.app.core.network.di
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.monospace.app.core.auth.AuthInterceptor
 import com.monospace.app.core.network.api.TaskApiService
 import dagger.Module
@@ -22,6 +24,10 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideGson(): Gson = GsonBuilder().create()
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -37,11 +43,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 

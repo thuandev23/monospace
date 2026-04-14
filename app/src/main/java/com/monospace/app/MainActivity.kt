@@ -1,14 +1,11 @@
 package com.monospace.app
 
-import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -33,6 +30,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.monospace.app.feature.launcher.components.HomeBottomBar
+import com.monospace.app.feature.onboardings.OnboardingViewModel
 import com.monospace.app.ui.navigation.MonospaceNavGraph
 import com.monospace.app.ui.navigation.Screen
 import com.monospace.app.ui.theme.FocusTheme
@@ -63,13 +61,16 @@ fun MainScreen() {
     val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
     val isOnline by connectivityViewModel.isOnline.collectAsState()
 
-    // Request POST_NOTIFICATIONS permission trên Android 13+
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val notificationPermissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { /* granted hay không đều ok — reminder vẫn work, chỉ notification bị tắt */ }
-        LaunchedEffect(Unit) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+    val onboardingCompleted by onboardingViewModel.onboardingCompleted.collectAsState()
+
+    // Wait until onboarding state is loaded, then navigate if needed
+    LaunchedEffect(onboardingCompleted) {
+        if (onboardingCompleted == false) {
+            navController.navigate(Screen.Onboarding.route) {
+                popUpTo(Screen.Home.BASE) { inclusive = false }
+                launchSingleTop = true
+            }
         }
     }
 

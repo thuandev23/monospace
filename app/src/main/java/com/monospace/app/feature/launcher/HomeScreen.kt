@@ -7,11 +7,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -42,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.feature.launcher.components.CreateTaskSheet
@@ -78,6 +85,7 @@ fun HomeScreen(
         onToggleTask = viewModel::toggleTask,
         onAddTask = viewModel::addTask,
         onDeleteSelected = viewModel::deleteSelectedTasks,
+        onDeleteTask = viewModel::deleteTask,
         onSelectAll = viewModel::selectAll,
         onSetSelectionMode = viewModel::setSelectionMode,
         onToggleTaskSelection = viewModel::toggleTaskSelection,
@@ -88,6 +96,7 @@ fun HomeScreen(
         onUpdateDraftListId = viewModel::setDraftListId,
         onSearchQueryChange = viewModel::setSearchQuery,
         onClearSearch = viewModel::clearSearch,
+        onPriorityFilterChange = viewModel::setPriorityFilter,
         onNavigateToTask = onNavigateToTask,
         onNavigateToLists = onNavigateToLists,
         initialShowSearch = initialShowSearch
@@ -101,6 +110,7 @@ fun HomeScreenContent(
     onToggleTask: (String, Boolean) -> Unit,
     onAddTask: (String) -> Unit,
     onDeleteSelected: () -> Unit,
+    onDeleteTask: (String) -> Unit = {},
     onSelectAll: () -> Unit,
     onSetSelectionMode: (Boolean) -> Unit,
     onToggleTaskSelection: (String) -> Unit,
@@ -111,6 +121,7 @@ fun HomeScreenContent(
     onUpdateDraftListId: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
+    onPriorityFilterChange: (Priority?) -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
@@ -172,6 +183,7 @@ fun HomeScreenContent(
                         state = uiState,
                         onToggleTask = onToggleTask,
                         onDeleteSelected = onDeleteSelected,
+                        onDeleteTask = onDeleteTask,
                         onSelectAll = onSelectAll,
                         onSetSelectionMode = onSetSelectionMode,
                         onToggleTaskSelection = onToggleTaskSelection,
@@ -179,6 +191,7 @@ fun HomeScreenContent(
                         onShowCreateSheet = onShowCreateSheet,
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
+                        onPriorityFilterChange = onPriorityFilterChange,
                         onNavigateToTask = onNavigateToTask,
                         onNavigateToLists = onNavigateToLists,
                         initialShowSearch = initialShowSearch
@@ -258,6 +271,7 @@ private fun SuccessContent(
     state: HomeUiState.Success,
     onToggleTask: (String, Boolean) -> Unit,
     onDeleteSelected: () -> Unit,
+    onDeleteTask: (String) -> Unit = {},
     onSelectAll: () -> Unit,
     onSetSelectionMode: (Boolean) -> Unit,
     onToggleTaskSelection: (String) -> Unit,
@@ -265,6 +279,7 @@ private fun SuccessContent(
     onShowCreateSheet: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
+    onPriorityFilterChange: (Priority?) -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
@@ -272,6 +287,10 @@ private fun SuccessContent(
     val activeTasks = remember(state.tasks) { state.tasks.filter { !it.isCompleted } }
     val completedTasks = remember(state.tasks) { state.tasks.filter { it.isCompleted } }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
+
+    val priorityChips = remember {
+        listOf(Priority.HIGH to "Cao", Priority.MEDIUM to "Trung bình", Priority.LOW to "Thấp")
+    }
 
     Column(
         modifier = Modifier
@@ -308,7 +327,34 @@ private fun SuccessContent(
                     onClearSearch()
                 }
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Priority filter chips
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 4.dp)
+        ) {
+            items(priorityChips) { (priority, label) ->
+                val selected = state.priorityFilter == priority
+                FilterChip(
+                    selected = selected,
+                    onClick = { onPriorityFilterChange(priority) },
+                    label = { Text(label, style = FocusTheme.typography.caption) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = FocusTheme.colors.primary,
+                        selectedLabelColor = FocusTheme.colors.background,
+                        containerColor = FocusTheme.colors.background,
+                        labelColor = FocusTheme.colors.secondary
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selected,
+                        borderColor = FocusTheme.colors.divider,
+                        selectedBorderColor = FocusTheme.colors.primary
+                    )
+                )
+            }
         }
 
         if (state.tasks.isEmpty()) {
@@ -334,7 +380,8 @@ private fun SuccessContent(
                         onSetSelectionMode(true)
                         onToggleTaskSelection(task.id)
                     }
-                }
+                },
+                onTaskSwipeDelete = onDeleteTask
             )
         }
     }

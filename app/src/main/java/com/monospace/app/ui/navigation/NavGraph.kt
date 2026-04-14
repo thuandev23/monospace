@@ -8,8 +8,12 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.feature.detail.TaskDetailScreen
+import com.monospace.app.feature.focus.FocusScreen
 import com.monospace.app.feature.launcher.HomeScreen
+import com.monospace.app.feature.onboardings.OnboardingScreen
+import com.monospace.app.feature.onboardings.OnboardingViewModel
 import com.monospace.app.feature.settings.SettingsScreen
 import com.monospace.app.feature.tasks.TaskListScreen
 import com.monospace.app.feature.upcoming.UpcomingScreen
@@ -24,6 +28,7 @@ sealed class Screen(val route: String) {
     object Upcoming : Screen("upcoming")
     object Tasks : Screen("tasks")
     object Settings : Screen("settings")
+    object Focus : Screen("focus")
     object TaskDetail : Screen("task/{taskId}") {
         fun withId(taskId: String) = "task/$taskId"
     }
@@ -40,7 +45,15 @@ fun MonospaceNavGraph(
         startDestination = startDestination
     ) {
         composable(Screen.Onboarding.route) {
-            // OnboardingScreen()
+            val viewModel: OnboardingViewModel = hiltViewModel()
+            OnboardingScreen(
+                onFinish = {
+                    viewModel.completeOnboarding()
+                    navController.navigate(Screen.Home.BASE) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(
             route = Screen.Home.route,
@@ -83,7 +96,12 @@ fun MonospaceNavGraph(
             )
         }
         composable(Screen.Settings.route) {
-            SettingsScreen()
+            SettingsScreen(
+                onNavigateToFocus = { navController.navigate(Screen.Focus.route) }
+            )
+        }
+        composable(Screen.Focus.route) {
+            FocusScreen()
         }
         composable(
             route = Screen.TaskDetail.route,

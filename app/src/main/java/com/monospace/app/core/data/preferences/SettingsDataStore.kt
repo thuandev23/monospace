@@ -3,6 +3,7 @@ package com.monospace.app.core.data.preferences
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,7 @@ class SettingsDataStore @Inject constructor(
         private val KEY_DEFAULT_LIST_ID = stringPreferencesKey("default_list_id")
         private val KEY_SIDEBAR_ITEM_ORDER = stringPreferencesKey("sidebar_item_order")
         private val KEY_SIDEBAR_HIDDEN_ITEMS = stringPreferencesKey("sidebar_hidden_items")
+        val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     // --- Default List ---
@@ -42,6 +44,16 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setSidebarItemOrder(order: List<String>) {
         context.dataStore.edit { it[KEY_SIDEBAR_ITEM_ORDER] = order.joinToString(",") }
+    }
+
+    // --- Onboarding ---
+
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ONBOARDING_COMPLETED] ?: false
+    }
+
+    suspend fun setOnboardingCompleted() {
+        context.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = true }
     }
 
     // --- Sidebar hidden items ---

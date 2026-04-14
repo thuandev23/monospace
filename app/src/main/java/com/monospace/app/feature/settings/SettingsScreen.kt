@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -75,7 +76,10 @@ data class EditableListItem(
 )
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onNavigateToFocus: () -> Unit = {},
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
@@ -543,6 +547,29 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Focus Mode Section
+            SectionHeader(title = "Focus Mode")
+            Surface(
+                color = FocusTheme.colors.surface,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Timer,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    title = "Focus Profiles",
+                    onClick = onNavigateToFocus
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))

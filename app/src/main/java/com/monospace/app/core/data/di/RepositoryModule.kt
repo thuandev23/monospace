@@ -1,10 +1,12 @@
 package com.monospace.app.core.data.di
 
 import com.monospace.app.core.data.repository.AppRepositoryImpl
+import com.monospace.app.core.data.repository.FocusProfileRepositoryImpl
 import com.monospace.app.core.data.repository.SyncQueueImpl
 import com.monospace.app.core.data.repository.TaskListRepositoryImpl
 import com.monospace.app.core.data.repository.TaskRepositoryImpl
 import com.monospace.app.core.domain.repository.AppRepository
+import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.SyncQueue
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.domain.repository.TaskRepository
@@ -41,4 +43,10 @@ abstract class RepositoryModule {
     abstract fun bindAppRepository(
         appRepositoryImpl: AppRepositoryImpl
     ): AppRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFocusProfileRepository(
+        focusProfileRepositoryImpl: FocusProfileRepositoryImpl
+    ): FocusProfileRepository
 }
