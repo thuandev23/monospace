@@ -6,7 +6,7 @@ data class TaskDto(
     @SerializedName("id") val id: String,
     @SerializedName("title") val title: String,
     @SerializedName("notes") val notes: String? = null,
-    @SerializedName("is_completed") val isCompleted: Boolean = false,
+    @SerializedName("task_status") val taskStatus: String = "NOT_DONE",
     @SerializedName("list_id") val listId: String,
     @SerializedName("priority") val priority: Int = 0,
     @SerializedName("start_date_time") val startDateTime: Long? = null,

@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
@@ -56,8 +57,8 @@ class UpcomingViewModel @Inject constructor(
         _showCompleted
     ) { tasks, showCompleted ->
         val today = LocalDate.now(ZoneId.systemDefault())
-        val activeTasks = tasks.filter { !it.isCompleted }
-        val completedTasks = tasks.filter { it.isCompleted }
+        val activeTasks = tasks.filter { it.status != TaskStatus.DONE }
+        val completedTasks = tasks.filter { it.status == TaskStatus.DONE }
 
         val groups = buildGroups(activeTasks, today)
 

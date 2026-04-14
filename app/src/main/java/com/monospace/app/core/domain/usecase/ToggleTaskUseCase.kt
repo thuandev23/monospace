@@ -23,10 +23,10 @@ class ToggleTaskUseCase @Inject constructor(
             payload = taskId
         )
 
-        // 3. Nếu vừa complete và task có repeat → tạo instance tiếp theo
+        // 3. Nếu vừa DONE và task có repeat → tạo instance tiếp theo
         if (isCompleted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val task = repository.getTaskById(taskId)
-            if (task?.repeat != null) {
+            if (task?.repeat != null && task.status == com.monospace.app.core.domain.model.TaskStatus.DONE) {
                 expandRepeatTaskUseCase(task)
             }
         }

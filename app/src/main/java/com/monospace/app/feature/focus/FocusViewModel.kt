@@ -7,17 +7,31 @@ import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+
+enum class FocusMode { MINIMAL, DISPLAY_CLOCK, STOPWATCH, TIMER }
+
+data class FocusTimerState(
+    val mode: FocusMode = FocusMode.TIMER,
+    val durationMinutes: Int = 25,
+    val remainingSeconds: Long = 25 * 60L,
+    val isRunning: Boolean = false,
+    val isFinished: Boolean = false
+)
 
 data class FocusUiState(
     val profiles: List<FocusProfile> = emptyList(),

@@ -32,7 +32,7 @@ class ReminderWorker @AssistedInject constructor(
 
         // Lấy task từ DB — nếu đã xóa hoặc đã hoàn thành thì bỏ qua
         val task = taskDao.getTaskById(taskId)
-        if (task == null || task.isCompleted) return Result.success()
+        if (task == null || task.taskStatus == "DONE" || task.taskStatus == "CANCELLED") return Result.success()
 
         showNotification(
             taskId = task.id,

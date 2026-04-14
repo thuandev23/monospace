@@ -7,6 +7,7 @@ import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.network.api.TaskApiService
 import com.monospace.app.core.network.dto.TaskDto
@@ -42,7 +43,7 @@ class PullTasksUseCase @Inject constructor(
         id = id,
         title = title,
         notes = notes,
-        isCompleted = isCompleted,
+        status = TaskStatus.entries.firstOrNull { it.name == taskStatus } ?: TaskStatus.NOT_DONE,
         listId = listId,
         syncStatus = SyncStatus.SYNCED,
         priority = Priority.entries.firstOrNull { it.value == priority } ?: Priority.NONE,

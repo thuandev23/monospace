@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
     // Flow giúp UI tự động cập nhật khi data trong database thay đổi
-    @Query("SELECT * FROM tasks WHERE list_id = :listId AND sync_status != 'pending_delete' ORDER BY is_completed ASC, priority DESC, start_date_time ASC")
+    @Query("SELECT * FROM tasks WHERE list_id = :listId AND sync_status != 'pending_delete' ORDER BY CASE WHEN task_status = 'DONE' THEN 1 ELSE 0 END ASC, priority DESC, start_date_time ASC")
     fun observeTasksByList(listId: String): Flow<List<TaskEntity>>
 
     // Lấy các task đang chờ đồng bộ lên server
@@ -29,10 +29,10 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun hardDelete(id: String)
 
-    @Query("UPDATE tasks SET is_completed = :isCompleted, sync_status = 'pending_update', updated_at = :now WHERE id = :id")
-    suspend fun updateCompletionStatus(
+    @Query("UPDATE tasks SET task_status = :taskStatus, sync_status = 'pending_update', updated_at = :now WHERE id = :id")
+    suspend fun updateTaskStatus(
         id: String,
-        isCompleted: Boolean,
+        taskStatus: String,
         now: Long = System.currentTimeMillis()
     )
 
@@ -46,7 +46,7 @@ interface TaskDao {
     @Query("""
         SELECT * FROM tasks
         WHERE reminder_value IS NOT NULL
-          AND is_completed = 0
+          AND task_status NOT IN ('DONE', 'CANCELLED')
           AND sync_status != 'pending_delete'
           AND start_date_time > :nowMs
     """)
@@ -59,7 +59,7 @@ interface TaskDao {
         ORDER BY
             CASE WHEN start_date_time IS NULL THEN 1 ELSE 0 END ASC,
             start_date_time ASC,
-            is_completed ASC,
+            CASE WHEN task_status = 'DONE' THEN 1 ELSE 0 END ASC,
             priority DESC
     """)
     fun observeAllTasksSortedByDate(): Flow<List<TaskEntity>>

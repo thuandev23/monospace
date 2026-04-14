@@ -7,6 +7,7 @@ import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
@@ -33,7 +34,7 @@ sealed interface TaskDetailUiState {
         val notes: String,
         val listId: String,
         val priority: Priority,
-        val isCompleted: Boolean,
+        val status: TaskStatus,
         val startDateTime: Instant?,
         val endDateTime: Instant?,
         val isAllDay: Boolean,
@@ -92,7 +93,7 @@ class TaskDetailViewModel @Inject constructor(
                 notes = task.notes ?: "",
                 listId = task.listId,
                 priority = task.priority,
-                isCompleted = task.isCompleted,
+                status = task.status,
                 startDateTime = task.startDateTime,
                 endDateTime = task.endDateTime,
                 isAllDay = task.isAllDay,
@@ -146,7 +147,7 @@ class TaskDetailViewModel @Inject constructor(
                     isAllDay = state.isAllDay,
                     reminder = state.reminder,
                     repeat = state.repeat,
-                    isCompleted = state.isCompleted
+                    status = state.status
                 )
                 updateTaskUseCase(updated)
                 _events.emit(TaskDetailEvent.SavedAndNavigateBack)

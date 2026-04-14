@@ -2,17 +2,24 @@ package com.monospace.app.feature.launcher.state
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.GroupOption
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
+import com.monospace.app.core.domain.model.SortOption
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskList
+import com.monospace.app.core.domain.model.TaskStatus
+import com.monospace.app.core.domain.model.ViewSettings
 import com.monospace.app.core.domain.repository.TaskListRepository
+import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.AddTaskUseCase
 import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
+import com.monospace.app.core.domain.usecase.UpdateTaskUseCase
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,6 +46,7 @@ sealed interface HomeUiState {
         val selectedTaskIds: Set<String> = emptySet(),
         val searchQuery: String = "",
         val priorityFilter: Priority? = null,
+        val viewSettings: ViewSettings = ViewSettings(),
         val isMenuExpanded: Boolean = false,
         val showCreateSheet: Boolean = false,
         val showDatePicker: Boolean = false,
@@ -62,7 +70,10 @@ class HomeViewModel @Inject constructor(
     private val addTaskUseCase: AddTaskUseCase,
     private val toggleTaskUseCase: ToggleTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
-    private val taskListRepository: TaskListRepository
+    private val updateTaskUseCase: UpdateTaskUseCase,
+    private val taskRepository: TaskRepository,
+    private val taskListRepository: TaskListRepository,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     // One-shot error events → hiển thị Snackbar ở UI
@@ -88,6 +99,10 @@ class HomeViewModel @Inject constructor(
     private val _draftIsAllDay = MutableStateFlow(true)
     private val _draftReminder = MutableStateFlow<ReminderConfig?>(null)
     private val _draftRepeat = MutableStateFlow<RepeatConfig?>(null)
+
+    // View Settings (persisted via DataStore)
+    private val _viewSettings = settingsDataStore.viewSettings
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ViewSettings())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val _baseState = combine(
@@ -132,11 +147,40 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    val uiState: StateFlow<HomeUiState> = combine(_baseState, _priorityFilter) { state, filter ->
+    private val _withPriority = combine(_baseState, _priorityFilter) { state, filter ->
         if (state is HomeUiState.Success) {
             val filtered = if (filter != null) state.tasks.filter { it.priority == filter }
                            else state.tasks
             state.copy(tasks = filtered, priorityFilter = filter)
+        } else state
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(_withPriority, _viewSettings) { state, settings ->
+        if (state is HomeUiState.Success) {
+            var tasks = state.tasks
+
+            // Apply visibility filters
+            if (!settings.showCompleted) tasks = tasks.filter { it.status != TaskStatus.DONE }
+            if (!settings.showInProgress) tasks = tasks.filter { it.status != TaskStatus.IN_PROGRESS }
+            if (!settings.showOverdue) {
+                val nowMs = System.currentTimeMillis()
+                tasks = tasks.filter { task ->
+                    task.startDateTime == null || task.startDateTime.toEpochMilli() >= nowMs
+                        || task.status == TaskStatus.DONE
+                }
+            }
+
+            // Apply sort
+            tasks = when (settings.sortBy) {
+                SortOption.NAME -> tasks.sortedBy { it.title.lowercase() }
+                SortOption.DATE -> tasks.sortedWith(
+                    compareBy(nullsLast()) { it.startDateTime }
+                )
+                SortOption.FOLDER -> tasks.sortedBy { it.listId }
+                SortOption.MANUAL -> tasks // DB order
+            }
+
+            state.copy(tasks = tasks, viewSettings = settings)
         } else state
     }.stateIn(
         scope = viewModelScope,
@@ -151,7 +195,7 @@ class HomeViewModel @Inject constructor(
                 val task = Task(
                     id = UUID.randomUUID().toString(),
                     title = title,
-                    isCompleted = false,
+                    status = TaskStatus.NOT_DONE,
                     listId = _draftListId.value,
                     syncStatus = SyncStatus.PENDING_CREATE,
                     priority = Priority.NONE,
@@ -261,5 +305,64 @@ class HomeViewModel @Inject constructor(
 
     fun clearSearch() {
         _searchQuery.value = ""
+    }
+
+    fun markSelectedTasksDone() {
+        viewModelScope.launch {
+            try {
+                _selectedTaskIds.value.forEach { id -> toggleTaskUseCase(id, true) }
+                setSelectionMode(false)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+            }
+        }
+    }
+
+    fun moveSelectedTasksToList(listId: String) {
+        viewModelScope.launch {
+            try {
+                _selectedTaskIds.value.forEach { id ->
+                    val task = taskRepository.getTaskById(id) ?: return@forEach
+                    updateTaskUseCase(task.copy(listId = listId))
+                }
+                setSelectionMode(false)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể di chuyển task: ${e.message}")
+            }
+        }
+    }
+
+    fun rescheduleSelectedTasks(
+        start: Instant?,
+        end: Instant?,
+        isAllDay: Boolean,
+        reminder: ReminderConfig?,
+        repeat: RepeatConfig?
+    ) {
+        viewModelScope.launch {
+            try {
+                _selectedTaskIds.value.forEach { id ->
+                    val task = taskRepository.getTaskById(id) ?: return@forEach
+                    updateTaskUseCase(
+                        task.copy(
+                            startDateTime = start,
+                            endDateTime = end,
+                            isAllDay = isAllDay,
+                            reminder = reminder,
+                            repeat = repeat
+                        )
+                    )
+                }
+                setSelectionMode(false)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể reschedule task: ${e.message}")
+            }
+        }
+    }
+
+    fun setViewSettings(settings: ViewSettings) {
+        viewModelScope.launch {
+            settingsDataStore.setViewSettings(settings)
+        }
     }
 }

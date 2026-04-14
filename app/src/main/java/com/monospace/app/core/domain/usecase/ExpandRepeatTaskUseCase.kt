@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.SyncOperationType
 import com.monospace.app.core.domain.repository.SyncQueue
 import com.monospace.app.core.domain.repository.TaskRepository
@@ -47,7 +48,7 @@ class ExpandRepeatTaskUseCase @Inject constructor(
 
         val nextTask = completedTask.copy(
             id = UUID.randomUUID().toString(),
-            isCompleted = false,
+            status = TaskStatus.NOT_DONE,
             startDateTime = nextStart.toInstant(),
             endDateTime = nextEnd,
             syncStatus = SyncStatus.PENDING_CREATE

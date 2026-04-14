@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -1296,4 +1297,279 @@ private fun DateSettingsItem(
             )
         )
     }
+}
+
+// ─── Selection Mode Action Bar ────────────────────────────────────────────────
+
+@Composable
+fun SelectionActionBar(
+    selectedCount: Int,
+    modifier: Modifier = Modifier,
+    onMoveToFolder: () -> Unit,
+    onReschedule: () -> Unit,
+    onDelete: () -> Unit,
+    onMarkDone: () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = FocusTheme.colors.surface,
+        tonalElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .height(64.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SelectionActionButton(
+                icon = Icons.Default.Folder,
+                label = "Move",
+                onClick = onMoveToFolder,
+                enabled = selectedCount > 0
+            )
+            SelectionActionButton(
+                icon = Icons.Default.DateRange,
+                label = "Reschedule",
+                onClick = onReschedule,
+                enabled = selectedCount > 0
+            )
+            SelectionActionButton(
+                icon = Icons.Default.Delete,
+                label = "Delete",
+                onClick = onDelete,
+                enabled = selectedCount > 0,
+                tint = FocusTheme.colors.destructive
+            )
+            SelectionActionButton(
+                icon = Icons.Default.Check,
+                label = "Done",
+                onClick = onMarkDone,
+                enabled = selectedCount > 0
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectionActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: androidx.compose.ui.graphics.Color = FocusTheme.colors.primary
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (enabled) tint else FocusTheme.colors.divider,
+            modifier = Modifier.size(24.dp)
+        )
+        Text(
+            text = label,
+            style = FocusTheme.typography.caption.copy(
+                color = if (enabled) tint else FocusTheme.colors.divider,
+                fontSize = 10.sp
+            )
+        )
+    }
+}
+
+// ─── Confirm Dialogs ──────────────────────────────────────────────────────────
+
+@Composable
+fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            color = FocusTheme.colors.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "Are you sure? This action cannot be undone.",
+                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary),
+                    textAlign = TextAlign.Center
+                )
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onConfirm,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = FocusTheme.colors.destructive
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, FocusTheme.colors.destructive.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Text(
+                        "Confirm Delete",
+                        style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.destructive)
+                    )
+                }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = FocusTheme.colors.primary
+                    )
+                ) {
+                    Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConfirmMarkDoneDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            color = FocusTheme.colors.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "Are you sure?",
+                    style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary),
+                    textAlign = TextAlign.Center
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                    }
+                    androidx.compose.material3.Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = FocusTheme.colors.primary
+                        )
+                    ) {
+                        Text("Mark as Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Move to Folder Sheet ─────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MoveToFolderSheet(
+    lists: List<TaskList>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = FocusTheme.colors.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary))
+            }
+            Text("Move to", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+            TextButton(onClick = onDismiss) {
+                Text("Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+            }
+        }
+        HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
+
+        Text(
+            "My Folders",
+            style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        )
+
+        lists.forEach { list ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(list.id) }
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Folder,
+                    null,
+                    modifier = Modifier.size(22.dp),
+                    tint = FocusTheme.colors.primary
+                )
+                Text(
+                    list.name,
+                    modifier = Modifier.weight(1f),
+                    style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+// ─── Reschedule Sheet ─────────────────────────────────────────────────────────
+
+@Composable
+fun RescheduleSheet(
+    onDismiss: () -> Unit,
+    onConfirm: (
+        start: java.time.Instant?,
+        end: java.time.Instant?,
+        isAllDay: Boolean,
+        reminder: ReminderConfig?,
+        repeat: RepeatConfig?
+    ) -> Unit
+) {
+    MinimalCalendarDialog(
+        onDismiss = onDismiss,
+        onConfigSave = { startDate, startTime, endDate, endTime, reminder, repeat ->
+            val zone = java.time.ZoneId.systemDefault()
+            val start = if (startTime != null)
+                startDate.atTime(startTime).atZone(zone).toInstant()
+            else
+                startDate.atStartOfDay(zone).toInstant()
+            val end = endDate?.let {
+                if (endTime != null) it.atTime(endTime).atZone(zone).toInstant()
+                else it.atStartOfDay(zone).toInstant()
+            }
+            val isAllDay = startTime == null
+            onConfirm(start, end, isAllDay, reminder, repeat)
+        }
+    )
 }

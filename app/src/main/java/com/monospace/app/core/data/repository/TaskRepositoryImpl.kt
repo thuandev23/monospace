@@ -40,7 +40,8 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean) {
-        taskDao.updateCompletionStatus(taskId, isCompleted)
+        val status = if (isCompleted) "DONE" else "NOT_DONE"
+        taskDao.updateTaskStatus(taskId, status)
     }
 
     override suspend fun deleteTask(taskId: String) {

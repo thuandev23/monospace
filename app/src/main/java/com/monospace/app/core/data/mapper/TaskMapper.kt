@@ -10,6 +10,7 @@ import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import java.time.Instant
 import java.time.LocalTime
 
@@ -20,7 +21,7 @@ fun TaskEntity.toDomain(): Task {
         id = this.id,
         title = this.title,
         notes = this.notes,
-        isCompleted = this.isCompleted,
+        status = TaskStatus.entries.firstOrNull { it.name == this.taskStatus } ?: TaskStatus.NOT_DONE,
         priority = Priority.entries.firstOrNull { it.value == this.priority } ?: Priority.NONE,
         listId = this.listId,
         syncStatus = when (this.syncStatus) {
@@ -57,7 +58,7 @@ fun Task.toEntity(): TaskEntity {
         id = this.id,
         title = this.title,
         notes = this.notes,
-        isCompleted = this.isCompleted,
+        taskStatus = this.status.name,
         priority = this.priority.value,
         listId = this.listId,
         syncStatus = when (this.syncStatus) {

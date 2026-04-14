@@ -51,14 +51,22 @@ import com.monospace.app.R
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
+import com.monospace.app.core.domain.model.TaskList
+import com.monospace.app.core.domain.model.TaskStatus
+import com.monospace.app.feature.launcher.components.ConfirmDeleteDialog
+import com.monospace.app.feature.launcher.components.ConfirmMarkDoneDialog
 import com.monospace.app.feature.launcher.components.CreateTaskSheet
 import com.monospace.app.feature.launcher.components.EmptyStateTask
 import com.monospace.app.feature.launcher.components.HomeTopBar
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
+import com.monospace.app.feature.launcher.components.MoveToFolderSheet
+import com.monospace.app.feature.launcher.components.RescheduleSheet
+import com.monospace.app.feature.launcher.components.SelectionActionBar
 import com.monospace.app.feature.launcher.components.TaskList
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
 import com.monospace.app.ui.theme.FocusTheme
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -97,6 +105,10 @@ fun HomeScreen(
         onSearchQueryChange = viewModel::setSearchQuery,
         onClearSearch = viewModel::clearSearch,
         onPriorityFilterChange = viewModel::setPriorityFilter,
+        onViewSettingsChange = viewModel::setViewSettings,
+        onMarkSelectedDone = viewModel::markSelectedTasksDone,
+        onMoveSelectedToList = viewModel::moveSelectedTasksToList,
+        onRescheduleSelected = viewModel::rescheduleSelectedTasks,
         onNavigateToTask = onNavigateToTask,
         onNavigateToLists = onNavigateToLists,
         initialShowSearch = initialShowSearch
@@ -122,6 +134,10 @@ fun HomeScreenContent(
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onPriorityFilterChange: (Priority?) -> Unit = {},
+    onViewSettingsChange: (com.monospace.app.core.domain.model.ViewSettings) -> Unit = {},
+    onMarkSelectedDone: () -> Unit = {},
+    onMoveSelectedToList: (String) -> Unit = {},
+    onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
@@ -192,6 +208,10 @@ fun HomeScreenContent(
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
                         onPriorityFilterChange = onPriorityFilterChange,
+                        onViewSettingsChange = onViewSettingsChange,
+                        onMarkSelectedDone = onMarkSelectedDone,
+                        onMoveSelectedToList = onMoveSelectedToList,
+                        onRescheduleSelected = onRescheduleSelected,
                         onNavigateToTask = onNavigateToTask,
                         onNavigateToLists = onNavigateToLists,
                         initialShowSearch = initialShowSearch
@@ -280,109 +300,168 @@ private fun SuccessContent(
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onPriorityFilterChange: (Priority?) -> Unit = {},
+    onViewSettingsChange: (com.monospace.app.core.domain.model.ViewSettings) -> Unit = {},
+    onMarkSelectedDone: () -> Unit = {},
+    onMoveSelectedToList: (String) -> Unit = {},
+    onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
 ) {
-    val activeTasks = remember(state.tasks) { state.tasks.filter { !it.isCompleted } }
-    val completedTasks = remember(state.tasks) { state.tasks.filter { it.isCompleted } }
+    val activeTasks = remember(state.tasks) { state.tasks.filter { it.status != TaskStatus.DONE } }
+    val completedTasks = remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
+
+    // Selection action dialog states
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showMarkDoneConfirm by remember { mutableStateOf(false) }
+    var showRescheduleSheet by remember { mutableStateOf(false) }
+    var showMoveToFolderSheet by remember { mutableStateOf(false) }
 
     val priorityChips = remember {
         listOf(Priority.HIGH to "Cao", Priority.MEDIUM to "Trung bình", Priority.LOW to "Thấp")
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-    ) {
-        HomeTopBar(
-            isSelectionMode = state.isSelectionMode,
-            selectedCount = state.selectedTaskIds.size,
-            onExitSelection = { onSetSelectionMode(false) },
-            onDeleteSelected = onDeleteSelected,
-            onSelectAll = onSelectAll,
-            isMenuExpanded = state.isMenuExpanded,
-            onMenuToggle = onMenuToggle,
-            onSelectedTasks = {
-                onSetSelectionMode(true)
-                onMenuToggle(false)
-            },
-            onNavigateToLists = {
-                onMenuToggle(false)
-                onNavigateToLists()
-            }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Search bar — hiện khi tap icon tìm kiếm hoặc đang có query
-        if (showSearchBar) {
-            TaskSearchBar(
-                query = state.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                onClose = {
-                    showSearchBar = false
-                    onClearSearch()
-                }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        // Priority filter chips
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
         ) {
-            items(priorityChips) { (priority, label) ->
-                val selected = state.priorityFilter == priority
-                FilterChip(
-                    selected = selected,
-                    onClick = { onPriorityFilterChange(priority) },
-                    label = { Text(label, style = FocusTheme.typography.caption) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = FocusTheme.colors.primary,
-                        selectedLabelColor = FocusTheme.colors.background,
-                        containerColor = FocusTheme.colors.background,
-                        labelColor = FocusTheme.colors.secondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
+            HomeTopBar(
+                isSelectionMode = state.isSelectionMode,
+                selectedCount = state.selectedTaskIds.size,
+                onExitSelection = { onSetSelectionMode(false) },
+                onDeleteSelected = { showDeleteConfirm = true },
+                onSelectAll = onSelectAll,
+                isMenuExpanded = state.isMenuExpanded,
+                onMenuToggle = onMenuToggle,
+                onSelectedTasks = {
+                    onSetSelectionMode(true)
+                    onMenuToggle(false)
+                },
+                onNavigateToLists = {
+                    onMenuToggle(false)
+                    onNavigateToLists()
+                },
+                viewSettings = state.viewSettings,
+                onViewSettingsChange = onViewSettingsChange
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Search bar
+            if (showSearchBar) {
+                TaskSearchBar(
+                    query = state.searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    onClose = {
+                        showSearchBar = false
+                        onClearSearch()
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Priority filter chips
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(priorityChips) { (priority, label) ->
+                    val selected = state.priorityFilter == priority
+                    FilterChip(
                         selected = selected,
-                        borderColor = FocusTheme.colors.divider,
-                        selectedBorderColor = FocusTheme.colors.primary
+                        onClick = { onPriorityFilterChange(priority) },
+                        label = { Text(label, style = FocusTheme.typography.caption) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = FocusTheme.colors.primary,
+                            selectedLabelColor = FocusTheme.colors.background,
+                            containerColor = FocusTheme.colors.background,
+                            labelColor = FocusTheme.colors.secondary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selected,
+                            borderColor = FocusTheme.colors.divider,
+                            selectedBorderColor = FocusTheme.colors.primary
+                        )
                     )
+                }
+            }
+
+            if (state.tasks.isEmpty()) {
+                Spacer(modifier = Modifier.weight(1f))
+                EmptyStateTask(onCreateClick = { onShowCreateSheet(true) })
+                Spacer(modifier = Modifier.weight(1.5f))
+            } else {
+                TaskList(
+                    activeTasks = activeTasks,
+                    completedTasks = completedTasks,
+                    isSelectionMode = state.isSelectionMode,
+                    selectedTaskIds = state.selectedTaskIds,
+                    onTaskToggle = onToggleTask,
+                    onTaskClick = { task ->
+                        if (state.isSelectionMode) {
+                            onToggleTaskSelection(task.id)
+                        } else {
+                            onNavigateToTask(task.id)
+                        }
+                    },
+                    onTaskLongClick = { task ->
+                        if (!state.isSelectionMode) {
+                            onSetSelectionMode(true)
+                            onToggleTaskSelection(task.id)
+                        }
+                    },
+                    onTaskSwipeDelete = onDeleteTask
                 )
             }
         }
 
-        if (state.tasks.isEmpty()) {
-            Spacer(modifier = Modifier.weight(1f))
-            EmptyStateTask(onCreateClick = { onShowCreateSheet(true) })
-            Spacer(modifier = Modifier.weight(1.5f))
-        } else {
-            TaskList(
-                activeTasks = activeTasks,
-                completedTasks = completedTasks,
-                isSelectionMode = state.isSelectionMode,
-                selectedTaskIds = state.selectedTaskIds,
-                onTaskToggle = onToggleTask,
-                onTaskClick = { task ->
-                    if (state.isSelectionMode) {
-                        onToggleTaskSelection(task.id)
-                    } else {
-                        onNavigateToTask(task.id)
-                    }
-                },
-                onTaskLongClick = { task ->
-                    if (!state.isSelectionMode) {
-                        onSetSelectionMode(true)
-                        onToggleTaskSelection(task.id)
-                    }
-                },
-                onTaskSwipeDelete = onDeleteTask
+        // Bottom action bar khi selection mode
+        if (state.isSelectionMode) {
+            SelectionActionBar(
+                selectedCount = state.selectedTaskIds.size,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onMoveToFolder = { showMoveToFolderSheet = true },
+                onReschedule = { showRescheduleSheet = true },
+                onDelete = { showDeleteConfirm = true },
+                onMarkDone = { showMarkDoneConfirm = true }
             )
         }
+    }
+
+    // Dialogs & Sheets
+    if (showDeleteConfirm) {
+        ConfirmDeleteDialog(
+            onConfirm = { onDeleteSelected(); showDeleteConfirm = false },
+            onDismiss = { showDeleteConfirm = false }
+        )
+    }
+
+    if (showMarkDoneConfirm) {
+        ConfirmMarkDoneDialog(
+            onConfirm = { onMarkSelectedDone(); showMarkDoneConfirm = false },
+            onDismiss = { showMarkDoneConfirm = false }
+        )
+    }
+
+    if (showRescheduleSheet) {
+        RescheduleSheet(
+            onDismiss = { showRescheduleSheet = false },
+            onConfirm = { start: Instant?, end: Instant?, isAllDay: Boolean, reminder: ReminderConfig?, repeat: RepeatConfig? ->
+                onRescheduleSelected(start, end, isAllDay, reminder, repeat)
+                showRescheduleSheet = false
+            }
+        )
+    }
+
+    if (showMoveToFolderSheet) {
+        MoveToFolderSheet(
+            lists = (state as? HomeUiState.Success)?.availableLists ?: emptyList<TaskList>(),
+            onSelect = { listId -> onMoveSelectedToList(listId); showMoveToFolderSheet = false },
+            onDismiss = { showMoveToFolderSheet = false }
+        )
     }
 }

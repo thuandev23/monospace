@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.R
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.ui.theme.FocusTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -215,7 +216,7 @@ fun TaskItem(
         verticalAlignment = Alignment.Top
     ) {
         CircularCheckbox(
-            checked = if (isSelectionMode) isSelected else task.isCompleted,
+            checked = if (isSelectionMode) isSelected else task.status == TaskStatus.DONE,
             onCheckedChange = { 
                 if (isSelectionMode) onClick() else onToggle(it)
             },
@@ -228,13 +229,13 @@ fun TaskItem(
             Text(
                 text = task.title,
                 style = FocusTheme.typography.headline.copy(
-                    color = if (task.isCompleted) FocusTheme.colors.secondary else FocusTheme.colors.primary,
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    color = if (task.status == TaskStatus.DONE) FocusTheme.colors.secondary else FocusTheme.colors.primary,
+                    textDecoration = if (task.status == TaskStatus.DONE) TextDecoration.LineThrough else TextDecoration.None
                 )
             )
-            
+
             // Dòng thông tin bổ sung: Ngày giờ, Nhắc nhở, Lặp lại
-            if (!task.isCompleted) {
+            if (task.status != TaskStatus.DONE) {
                 Row(
                     modifier = Modifier.padding(top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,

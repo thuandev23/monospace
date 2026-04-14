@@ -7,7 +7,7 @@ data class Task(
     val id: String,
     val title: String,
     val notes: String? = null,
-    val isCompleted: Boolean = false,
+    val status: TaskStatus = TaskStatus.NOT_DONE,
     val listId: String = "default",
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val priority: Priority = Priority.NONE,
@@ -42,6 +42,10 @@ enum class RepeatUnit { DAY, WEEK, MONTH, YEAR }
 
 enum class Priority(val value: Int) {
     NONE(0), LOW(1), MEDIUM(2), HIGH(3)
+}
+
+enum class TaskStatus {
+    NOT_DONE, IN_PROGRESS, CANCELLED, DONE
 }
 
 enum class SyncStatus {

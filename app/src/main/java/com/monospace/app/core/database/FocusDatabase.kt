@@ -18,7 +18,7 @@ import com.monospace.app.core.database.entity.TaskListEntity
         SyncQueueEntity::class,
         FocusProfileEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class FocusDatabase : RoomDatabase() {
