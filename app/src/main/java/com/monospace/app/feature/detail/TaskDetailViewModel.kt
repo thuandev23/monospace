@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import javax.inject.Inject
 
@@ -59,7 +60,7 @@ class TaskDetailViewModel @Inject constructor(
     private val deleteTaskUseCase: DeleteTaskUseCase
 ) : ViewModel() {
 
-    private val taskId: String = checkNotNull(savedStateHandle["taskId"])
+    private val taskId: String = savedStateHandle.get<String>("taskId") ?: ""
 
     private val _uiState = MutableStateFlow<TaskDetailUiState>(TaskDetailUiState.Loading)
     val uiState: StateFlow<TaskDetailUiState> = _uiState.asStateFlow()
@@ -73,8 +74,14 @@ class TaskDetailViewModel @Inject constructor(
 
     private fun loadTask() {
         viewModelScope.launch {
+            if (taskId.isEmpty()) {
+                _uiState.value = TaskDetailUiState.NotFound
+                return@launch
+            }
             val task = taskRepository.getTaskById(taskId)
-            val lists = taskListRepository.observeAllLists().first()
+            val lists = withTimeoutOrNull(5_000L) {
+                taskListRepository.observeAllLists().first()
+            } ?: emptyList()
             if (task == null) {
                 _uiState.value = TaskDetailUiState.NotFound
                 return@launch

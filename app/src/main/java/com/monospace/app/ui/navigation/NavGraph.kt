@@ -97,7 +97,8 @@ fun MonospaceNavGraph(
         }
         composable(Screen.Settings.route) {
             SettingsScreen(
-                onNavigateToFocus = { navController.navigate(Screen.Focus.route) }
+                onNavigateToFocus = { navController.navigate(Screen.Focus.route) },
+                onNavigateToLists = { navController.navigate(Screen.Tasks.route) }
             )
         }
         composable(Screen.Focus.route) {

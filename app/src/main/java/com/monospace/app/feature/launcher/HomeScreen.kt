@@ -244,7 +244,7 @@ private fun TaskSearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Tìm task...", color = FocusTheme.colors.secondary) },
+        placeholder = { Text(stringResource(R.string.hint_search_tasks), color = FocusTheme.colors.secondary) },
         leadingIcon = {
             Icon(Icons.Default.Search, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
         },

@@ -49,9 +49,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.ui.theme.FocusTheme
 
@@ -88,7 +90,7 @@ fun TaskListScreen(
                 shape = CircleShape,
                 modifier = Modifier.size(64.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tạo danh sách", modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.content_desc_create_list), modifier = Modifier.size(28.dp))
             }
         }
     ) { innerPadding ->
@@ -100,7 +102,7 @@ fun TaskListScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Danh sách",
+                text = stringResource(R.string.label_lists),
                 style = FocusTheme.typography.displayLarge.copy(
                     color = FocusTheme.colors.primary,
                     fontWeight = FontWeight.Bold
@@ -119,7 +121,7 @@ fun TaskListScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            "Chưa có danh sách nào",
+                            stringResource(R.string.msg_no_lists),
                             style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
                         )
                     }
@@ -201,7 +203,7 @@ private fun TaskListItem(
             )
             if (isDefault) {
                 Text(
-                    text = "Danh sách mặc định",
+                    text = stringResource(R.string.label_default_list),
                     style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary)
                 )
             }
@@ -214,7 +216,7 @@ private fun TaskListItem(
             ) {
                 Icon(
                     Icons.Default.Edit,
-                    contentDescription = "Tuỳ chọn",
+                    contentDescription = stringResource(R.string.content_desc_options),
                     tint = FocusTheme.colors.secondary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -225,13 +227,13 @@ private fun TaskListItem(
                 modifier = Modifier.background(FocusTheme.colors.surface)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Đổi tên", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)) },
+                    text = { Text(stringResource(R.string.action_rename), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)) },
                     leadingIcon = { Icon(Icons.Default.Edit, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(18.dp)) },
                     onClick = { showMenu = false; onEdit() }
                 )
                 if (!isDefault) {
                     DropdownMenuItem(
-                        text = { Text("Xoá", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.destructive)) },
+                        text = { Text(stringResource(R.string.action_delete_item), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.destructive)) },
                         leadingIcon = { Icon(Icons.Default.Delete, null, tint = FocusTheme.colors.destructive, modifier = Modifier.size(18.dp)) },
                         onClick = { showMenu = false; onDelete() }
                     )
@@ -255,13 +257,13 @@ private fun CreateListDialog(
         onDismissRequest = onDismiss,
         containerColor = FocusTheme.colors.surface,
         title = {
-            Text("Danh sách mới", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+            Text(stringResource(R.string.label_new_task_list), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
         },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                placeholder = { Text("Tên danh sách", color = FocusTheme.colors.secondary) },
+                placeholder = { Text(stringResource(R.string.hint_list_name), color = FocusTheme.colors.secondary) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -276,12 +278,12 @@ private fun CreateListDialog(
             TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
                 Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Tạo", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_create), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Huỷ", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
             }
         }
     )
@@ -302,7 +304,7 @@ private fun RenameListDialog(
         onDismissRequest = onDismiss,
         containerColor = FocusTheme.colors.surface,
         title = {
-            Text("Đổi tên", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+            Text(stringResource(R.string.action_rename), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
         },
         text = {
             OutlinedTextField(
@@ -320,12 +322,12 @@ private fun RenameListDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
-                Text("Lưu", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_save), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Huỷ", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
             }
         }
     )

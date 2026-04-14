@@ -35,10 +35,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
 import com.monospace.app.feature.launcher.components.SwipeableTaskItem
 import com.monospace.app.ui.theme.FocusTheme
 
@@ -73,7 +75,7 @@ fun UpcomingScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Upcoming",
+                        stringResource(R.string.label_upcoming),
                         style = FocusTheme.typography.title.copy(
                             color = FocusTheme.colors.primary,
                             fontWeight = FontWeight.SemiBold
@@ -86,7 +88,10 @@ fun UpcomingScreen(
                         IconButton(onClick = viewModel::toggleShowCompleted) {
                             Icon(
                                 Icons.Default.CheckCircle,
-                                contentDescription = if (state.showCompleted) "Ẩn hoàn thành" else "Hiện hoàn thành",
+                                contentDescription = stringResource(
+                                    if (state.showCompleted) R.string.action_hide_completed
+                                    else R.string.action_show_completed
+                                ),
                                 tint = if (state.showCompleted) FocusTheme.colors.primary
                                        else FocusTheme.colors.secondary
                             )
@@ -121,7 +126,7 @@ fun UpcomingScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                "Không có task nào sắp tới",
+                                stringResource(R.string.msg_no_upcoming_tasks),
                                 style = FocusTheme.typography.title.copy(
                                     color = FocusTheme.colors.secondary
                                 )
@@ -141,8 +146,8 @@ fun UpcomingScreen(
                         )
                     ) {
                         state.groups.forEach { group ->
-                            stickyHeader(key = group.label) {
-                                SectionHeader(label = group.label)
+                            stickyHeader(key = group.type.name) {
+                                SectionHeader(label = group.type.label())
                             }
                             items(items = group.tasks, key = { it.id }) { task ->
                                 SwipeableTaskItem(
@@ -162,7 +167,7 @@ fun UpcomingScreen(
                         if (state.showCompleted && state.completedTasks.isNotEmpty()) {
                             stickyHeader(key = "completed_header") {
                                 SectionHeader(
-                                    label = "Đã hoàn thành (${state.completedTasks.size})"
+                                    label = stringResource(R.string.label_completed_count, state.completedTasks.size)
                                 )
                             }
                             items(items = state.completedTasks, key = { "done_${it.id}" }) { task ->
@@ -185,6 +190,18 @@ fun UpcomingScreen(
         }
     }
 }
+
+@Composable
+private fun UpcomingGroupType.label(): String = stringResource(
+    when (this) {
+        UpcomingGroupType.OVERDUE -> R.string.label_group_overdue
+        UpcomingGroupType.TODAY -> R.string.label_group_today
+        UpcomingGroupType.TOMORROW -> R.string.label_group_tomorrow
+        UpcomingGroupType.THIS_WEEK -> R.string.label_group_this_week
+        UpcomingGroupType.LATER -> R.string.label_group_later
+        UpcomingGroupType.NO_DATE -> R.string.label_group_no_date_scheduled
+    }
+)
 
 @Composable
 private fun SectionHeader(label: String) {

@@ -66,6 +66,8 @@ import com.monospace.app.ui.theme.FocusTheme
 import java.util.Calendar
 import java.util.UUID
 
+// ─── SettingItem: onClick nullable → không hiện arrow nếu null ───────────────
+
 data class EditableListItem(
     val id: String,
     val title: String,
@@ -78,6 +80,7 @@ data class EditableListItem(
 @Composable
 fun SettingsScreen(
     onNavigateToFocus: () -> Unit = {},
+    onNavigateToLists: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -266,7 +269,7 @@ fun SettingsScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.MoreHoriz,
-                                        contentDescription = "More",
+                                        contentDescription = null,
                                         tint = FocusTheme.colors.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -274,9 +277,7 @@ fun SettingsScreen(
 
                                 MaterialTheme(
                                     shapes = MaterialTheme.shapes.copy(
-                                        extraSmall = RoundedCornerShape(
-                                            24.dp
-                                        )
+                                        extraSmall = RoundedCornerShape(24.dp)
                                     ),
                                     colorScheme = MaterialTheme.colorScheme.copy(surface = FocusTheme.colors.surface)
                                 ) {
@@ -285,89 +286,35 @@ fun SettingsScreen(
                                         onDismissRequest = { showMoreMenu = false },
                                         modifier = Modifier
                                             .width(220.dp)
-                                            .background(
-                                                FocusTheme.colors.surface,
-                                                RoundedCornerShape(24.dp)
-                                            )
+                                            .background(FocusTheme.colors.surface, RoundedCornerShape(24.dp))
                                     ) {
                                         DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    stringResource(R.string.label_edit_lists),
-                                                    style = FocusTheme.typography.body
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    Icons.Default.Edit,
-                                                    null,
-                                                    modifier = Modifier.size(20.dp),
-                                                    tint = FocusTheme.colors.primary
-                                                )
-                                            },
-                                            onClick = {
-                                                showMoreMenu = false
-                                                isEditMode = true
-                                            }
+                                            text = { Text(stringResource(R.string.label_edit_lists), style = FocusTheme.typography.body) },
+                                            leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(20.dp), tint = FocusTheme.colors.primary) },
+                                            onClick = { showMoreMenu = false; isEditMode = true }
                                         )
                                         HorizontalDivider(
-                                            modifier = Modifier.padding(
-                                                vertical = 4.dp,
-                                                horizontal = 12.dp
-                                            ), color = FocusTheme.colors.divider.copy(alpha = 0.5f)
+                                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 12.dp),
+                                            color = FocusTheme.colors.divider.copy(alpha = 0.5f)
                                         )
                                         DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    stringResource(R.string.label_new_folder),
-                                                    style = FocusTheme.typography.body
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    Icons.Default.CreateNewFolder,
-                                                    null,
-                                                    modifier = Modifier.size(20.dp),
-                                                    tint = FocusTheme.colors.primary
-                                                )
-                                            },
-                                            onClick = {
-                                                showMoreMenu = false
-                                                showAddFolderDialog = true
-                                            }
+                                            text = { Text(stringResource(R.string.label_new_folder), style = FocusTheme.typography.body) },
+                                            leadingIcon = { Icon(Icons.Default.CreateNewFolder, null, modifier = Modifier.size(20.dp), tint = FocusTheme.colors.primary) },
+                                            onClick = { showMoreMenu = false; showAddFolderDialog = true }
                                         )
                                         DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    stringResource(R.string.label_new_list),
-                                                    style = FocusTheme.typography.body
-                                                )
-                                            },
+                                            text = { Text(stringResource(R.string.label_new_list), style = FocusTheme.typography.body) },
                                             leadingIcon = { ListIcon() },
-                                            onClick = { showMoreMenu = false }
+                                            onClick = { showMoreMenu = false; onNavigateToLists() }
                                         )
                                         DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    stringResource(R.string.label_new_workspace),
-                                                    style = FocusTheme.typography.body
-                                                )
-                                            },
+                                            text = { Text(stringResource(R.string.label_new_workspace), style = FocusTheme.typography.body) },
                                             leadingIcon = { NotionIcon(size = 20.dp) },
                                             onClick = { showMoreMenu = false }
                                         )
                                     }
                                 }
                             }
-                        }
-
-                        IconButton(onClick = { /* TODO */ }, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = FocusTheme.colors.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
                         }
                     }
                 }
@@ -376,15 +323,15 @@ fun SettingsScreen(
         floatingActionButton = {
             if (!isEditMode) {
                 FloatingActionButton(
-                    onClick = { /* TODO */ },
-                    containerColor = Color.Black,
-                    contentColor = Color.White,
+                    onClick = onNavigateToLists,
+                    containerColor = FocusTheme.colors.primary,
+                    contentColor = FocusTheme.colors.background,
                     shape = CircleShape,
                     modifier = Modifier.size(64.dp)
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "Add",
+                        contentDescription = stringResource(R.string.label_new_list),
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -435,10 +382,8 @@ fun SettingsScreen(
                                 onDragEnd = { accumulatedDrag = 0f }
                             )
                         } else {
-                            SettingItem(
-                                icon = item.icon,
-                                title = item.title,
-                                onClick = { /* TODO */ })
+                            // Main section items are display-only in view mode (sidebar customization)
+                            SettingItem(icon = item.icon, title = item.title)
                         }
                         if (index < itemsToRender.size - 1) {
                             HorizontalDivider(
@@ -493,10 +438,8 @@ fun SettingsScreen(
                                 onDragEnd = { accumulatedDrag = 0f }
                             )
                         } else {
-                            SettingItem(
-                                icon = item.icon,
-                                title = item.title,
-                                onClick = { /* TODO */ })
+                            // Folder items are display-only in view mode
+                            SettingItem(icon = item.icon, title = item.title)
                         }
                         if (index < itemsToRender.size - 1) {
                             HorizontalDivider(
@@ -513,7 +456,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Reminders Section
-            SectionHeader(title = "Reminders")
+            SectionHeader(title = stringResource(R.string.label_section_reminders))
             Surface(
                 color = FocusTheme.colors.surface,
                 shape = RoundedCornerShape(24.dp),
@@ -532,10 +475,12 @@ fun SettingsScreen(
                                 }
                             )
                         } else {
+                            // Reminders — coming soon
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                onClick = { /* TODO */ })
+                                badge = stringResource(R.string.label_coming_soon)
+                            )
                         }
                         if (index < itemsToRender.size - 1) {
                             HorizontalDivider(
@@ -552,7 +497,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Focus Mode Section
-            SectionHeader(title = "Focus Mode")
+            SectionHeader(title = stringResource(R.string.label_section_focus_mode))
             Surface(
                 color = FocusTheme.colors.surface,
                 shape = RoundedCornerShape(24.dp),
@@ -567,7 +512,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     },
-                    title = "Focus Profiles",
+                    title = stringResource(R.string.label_focus_profiles),
                     onClick = onNavigateToFocus
                 )
             }
@@ -575,7 +520,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Notion Section
-            SectionHeader(title = "Notion")
+            SectionHeader(title = stringResource(R.string.label_section_notion))
             Surface(
                 color = FocusTheme.colors.surface,
                 shape = RoundedCornerShape(24.dp),
@@ -594,10 +539,12 @@ fun SettingsScreen(
                                 }
                             )
                         } else {
+                            // Notion — coming soon
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                onClick = { /* TODO */ })
+                                badge = stringResource(R.string.label_coming_soon)
+                            )
                         }
                         if (index < itemsToRender.size - 1) {
                             HorizontalDivider(
@@ -729,13 +676,16 @@ fun EditListItemRow(
 fun SettingItem(
     icon: @Composable () -> Unit,
     title: String,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null,
+    badge: String? = null
 ) {
+    val modifier = if (onClick != null) {
+        Modifier.fillMaxWidth().clickable { onClick() }.padding(16.dp)
+    } else {
+        Modifier.fillMaxWidth().padding(16.dp)
+    }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
@@ -751,12 +701,23 @@ fun SettingItem(
             ),
             modifier = Modifier.weight(1f)
         )
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = FocusTheme.colors.divider,
-            modifier = Modifier.size(20.dp)
-        )
+        if (badge != null) {
+            Text(
+                text = badge,
+                style = FocusTheme.typography.label.copy(
+                    color = FocusTheme.colors.secondary,
+                    fontSize = 11.sp
+                )
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        } else if (onClick != null) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = FocusTheme.colors.divider,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

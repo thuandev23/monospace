@@ -23,8 +23,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
+enum class UpcomingGroupType { OVERDUE, TODAY, TOMORROW, THIS_WEEK, LATER, NO_DATE }
+
 data class UpcomingGroup(
-    val label: String,
+    val type: UpcomingGroupType,
     val tasks: List<Task>
 )
 
@@ -118,12 +120,12 @@ class UpcomingViewModel @Inject constructor(
         }
 
         return buildList {
-            if (overdue.isNotEmpty()) add(UpcomingGroup("Quá hạn", overdue))
-            if (todayTasks.isNotEmpty()) add(UpcomingGroup("Hôm nay", todayTasks))
-            if (tomorrowTasks.isNotEmpty()) add(UpcomingGroup("Ngày mai", tomorrowTasks))
-            if (thisWeekTasks.isNotEmpty()) add(UpcomingGroup("Tuần này", thisWeekTasks))
-            if (laterTasks.isNotEmpty()) add(UpcomingGroup("Sau đó", laterTasks))
-            if (noDatTasks.isNotEmpty()) add(UpcomingGroup("Chưa lên lịch", noDatTasks))
+            if (overdue.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.OVERDUE, overdue))
+            if (todayTasks.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.TODAY, todayTasks))
+            if (tomorrowTasks.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.TOMORROW, tomorrowTasks))
+            if (thisWeekTasks.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.THIS_WEEK, thisWeekTasks))
+            if (laterTasks.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.LATER, laterTasks))
+            if (noDatTasks.isNotEmpty()) add(UpcomingGroup(UpcomingGroupType.NO_DATE, noDatTasks))
         }
     }
 }

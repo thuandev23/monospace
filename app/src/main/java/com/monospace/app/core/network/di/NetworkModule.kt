@@ -2,6 +2,7 @@ package com.monospace.app.core.network.di
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.monospace.app.BuildConfig
 import com.monospace.app.core.auth.AuthInterceptor
 import com.monospace.app.core.network.api.TaskApiService
 import dagger.Module
@@ -19,9 +20,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // TODO: Thay bằng base URL thật của backend
-    private const val BASE_URL = "https://api.monospace.app/v1/"
-
     @Provides
     @Singleton
     fun provideGson(): Gson = GsonBuilder().create()
@@ -29,12 +27,15 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .addInterceptor(logging)
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BODY
+                    })
+                }
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -45,7 +46,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient, gson: Gson): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BuildConfig.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()

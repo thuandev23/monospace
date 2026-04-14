@@ -71,4 +71,53 @@
     <string name="label_new_workspace">New workspace</string>
     <string name="label_my_folders">My Folders</string>
     <string name="default_task_list_name">My Tasks</string>
+
+    <!-- Search -->
+    <string name="hint_search_tasks">Tìm task…</string>
+
+    <!-- Upcoming screen -->
+    <string name="msg_no_upcoming_tasks">Không có task nào sắp tới</string>
+    <string name="action_hide_completed">Ẩn hoàn thành</string>
+    <string name="action_show_completed">Hiện hoàn thành</string>
+    <string name="label_completed_count">Đã hoàn thành (%1$d)</string>
+    <string name="label_group_overdue">Quá hạn</string>
+    <string name="label_group_today">Hôm nay</string>
+    <string name="label_group_tomorrow">Ngày mai</string>
+    <string name="label_group_this_week">Tuần này</string>
+    <string name="label_group_later">Sau đó</string>
+    <string name="label_group_no_date_scheduled">Chưa lên lịch</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title_welcome">Chào mừng đến với Monospace</string>
+    <string name="onboarding_subtitle_welcome">Quản lý công việc đơn giản, tập trung vào những điều quan trọng nhất.</string>
+    <string name="onboarding_title_schedule">Lên lịch thông minh</string>
+    <string name="onboarding_subtitle_schedule">Sắp xếp nhiệm vụ theo ngày, thiết lập nhắc nhở và lặp lại tự động.</string>
+    <string name="onboarding_title_notifications">Bật thông báo</string>
+    <string name="onboarding_subtitle_notifications">Nhận nhắc nhở đúng lúc để không bỏ lỡ bất kỳ nhiệm vụ quan trọng nào.</string>
+    <string name="action_continue">Tiếp tục</string>
+    <string name="action_get_started">Bắt đầu</string>
+    <string name="action_skip">Bỏ qua</string>
+
+    <!-- Settings sections -->
+    <string name="label_section_reminders">Reminders</string>
+    <string name="label_section_focus_mode">Focus Mode</string>
+    <string name="label_focus_profiles">Focus Profiles</string>
+    <string name="label_section_notion">Notion</string>
+    <string name="label_coming_soon">Sắp ra mắt</string>
+    <string name="label_item_all">All</string>
+    <string name="label_sync_reminders">Sync with Reminders</string>
+    <string name="label_connect_notion">Connect to Notion</string>
+
+    <!-- Task List screen -->
+    <string name="label_lists">Danh sách</string>
+    <string name="label_default_list">Danh sách mặc định</string>
+    <string name="action_rename">Đổi tên</string>
+    <string name="action_create">Tạo</string>
+    <string name="action_save">Lưu</string>
+    <string name="action_delete_item">Xoá</string>
+    <string name="label_new_task_list">Danh sách mới</string>
+    <string name="hint_list_name">Tên danh sách</string>
+    <string name="msg_no_lists">Chưa có danh sách nào</string>
+    <string name="content_desc_create_list">Tạo danh sách</string>
+    <string name="content_desc_options">Tuỳ chọn</string>
 </resources>

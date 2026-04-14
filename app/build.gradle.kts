@@ -21,6 +21,7 @@ android {
 
         // Đặt false khi chưa có backend. Khi backend sẵn sàng đổi thành true.
         buildConfigField("boolean", "BACKEND_ENABLED", "false")
+        buildConfigField("String", "BASE_URL", "\"https://api.monospace.app/v1/\"")
 
         vectorDrawables {
             useSupportLibrary = true
@@ -29,7 +30,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

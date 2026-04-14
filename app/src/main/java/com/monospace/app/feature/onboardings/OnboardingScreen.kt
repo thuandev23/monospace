@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.monospace.app.R
@@ -47,8 +48,8 @@ import com.monospace.app.ui.theme.FocusTheme
 import kotlinx.coroutines.delay
 
 private data class OnboardingPage(
-    val title: String,
-    val subtitle: String,
+    val titleRes: Int,
+    val subtitleRes: Int,
     val icon: @Composable () -> Unit
 )
 
@@ -59,18 +60,18 @@ fun OnboardingScreen(
     val pages = remember {
         listOf(
             OnboardingPage(
-                title = "Chào mừng đến với Monospace",
-                subtitle = "Quản lý công việc đơn giản, tập trung vào những điều quan trọng nhất.",
+                titleRes = R.string.onboarding_title_welcome,
+                subtitleRes = R.string.onboarding_subtitle_welcome,
                 icon = {}
             ),
             OnboardingPage(
-                title = "Lên lịch thông minh",
-                subtitle = "Sắp xếp nhiệm vụ theo ngày, thiết lập nhắc nhở và lặp lại tự động.",
+                titleRes = R.string.onboarding_title_schedule,
+                subtitleRes = R.string.onboarding_subtitle_schedule,
                 icon = {}
             ),
             OnboardingPage(
-                title = "Bật thông báo",
-                subtitle = "Nhận nhắc nhở đúng lúc để không bỏ lỡ bất kỳ nhiệm vụ quan trọng nào.",
+                titleRes = R.string.onboarding_title_notifications,
+                subtitleRes = R.string.onboarding_subtitle_notifications,
                 icon = { Icon(Icons.Default.Notifications, null, modifier = Modifier.size(64.dp), tint = FocusTheme.colors.primary) }
             )
         )
@@ -128,7 +129,7 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 Text(
-                    text = pages[currentPage].title,
+                    text = stringResource(pages[currentPage].titleRes),
                     style = FocusTheme.typography.title.copy(
                         color = FocusTheme.colors.primary,
                         textAlign = TextAlign.Center
@@ -138,7 +139,7 @@ fun OnboardingScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = pages[currentPage].subtitle,
+                    text = stringResource(pages[currentPage].subtitleRes),
                     style = FocusTheme.typography.body.copy(
                         color = FocusTheme.colors.secondary,
                         textAlign = TextAlign.Center
@@ -202,10 +203,10 @@ fun OnboardingScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
-                            Text("Bắt đầu", style = FocusTheme.typography.headline)
+                            Text(stringResource(R.string.action_get_started), style = FocusTheme.typography.headline)
                         }
                     } else {
-                        Text("Tiếp tục", style = FocusTheme.typography.headline)
+                        Text(stringResource(R.string.action_continue), style = FocusTheme.typography.headline)
                     }
                 }
 
@@ -214,7 +215,7 @@ fun OnboardingScreen(
                 if (currentPage < pages.lastIndex) {
                     TextButton(onClick = onFinish) {
                         Text(
-                            "Bỏ qua",
+                            stringResource(R.string.action_skip),
                             style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary)
                         )
                     }
