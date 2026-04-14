@@ -23,6 +23,13 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    override fun observeAllTasksSortedByDate(): Flow<List<Task>> {
+        return taskDao.observeAllTasksSortedByDate().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun getTaskById(taskId: String): Task? {
         return taskDao.getTaskById(taskId)?.toDomain()
     }

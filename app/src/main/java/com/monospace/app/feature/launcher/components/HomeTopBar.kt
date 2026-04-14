@@ -53,7 +53,8 @@ fun HomeTopBar(
     onSelectAll: () -> Unit,
     isMenuExpanded: Boolean,
     onMenuToggle: (Boolean) -> Unit,
-    onSelectedTasks: () -> Unit
+    onSelectedTasks: () -> Unit,
+    onNavigateToLists: () -> Unit = {}
 ) {
     var showViewOptions by remember { mutableStateOf(false) }
 
@@ -110,7 +111,8 @@ fun HomeTopBar(
                         onViewOptionsClick = {
                             onMenuToggle(false)
                             showViewOptions = true
-                        }
+                        },
+                        onManageListsClick = onNavigateToLists
                     )
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,7 +173,8 @@ fun MonospaceDropdownMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
     onSelectedTasks: () -> Unit,
-    onViewOptionsClick: () -> Unit
+    onViewOptionsClick: () -> Unit,
+    onManageListsClick: () -> Unit = {}
 ) {
     MaterialTheme(
         shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(20.dp))
@@ -222,6 +225,28 @@ fun MonospaceDropdownMenu(
                     )
                 },
                 onClick = onSelectedTasks
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                thickness = 0.5.dp,
+                color = FocusTheme.colors.divider
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        "Manage lists",
+                        style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary)
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Menu,
+                        null,
+                        modifier = Modifier.size(20.dp),
+                        tint = FocusTheme.colors.primary
+                    )
+                },
+                onClick = { onDismiss(); onManageListsClick() }
             )
         }
     }

@@ -3,6 +3,7 @@ package com.monospace.app
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
+import androidx.annotation.RequiresApi
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -40,6 +41,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -51,6 +53,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -72,6 +75,7 @@ fun MainScreen() {
 
     val showBottomBar = currentRoute in listOf(
         Screen.Home.route,
+        Screen.Upcoming.route,
         Screen.Tasks.route,
         Screen.Settings.route
     )
@@ -103,7 +107,7 @@ fun MainScreen() {
                             }
                         },
                         onUpcomingClick = {
-                            navController.navigate(Screen.Tasks.route) {
+                            navController.navigate(Screen.Upcoming.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }

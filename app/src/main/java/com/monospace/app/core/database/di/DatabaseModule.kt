@@ -5,7 +5,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.monospace.app.R
+import com.monospace.app.core.database.DatabaseMigrations
 import com.monospace.app.core.database.FocusDatabase
+import com.monospace.app.core.database.dao.FocusProfileDao
 import com.monospace.app.core.database.dao.SyncQueueDao
 import com.monospace.app.core.database.dao.TaskDao
 import com.monospace.app.core.database.dao.TaskListDao
@@ -30,6 +32,7 @@ object DatabaseModule {
             FocusDatabase::class.java,
             DATABASE_NAME
         )
+            .addMigrations(DatabaseMigrations.MIGRATION_1_2)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -40,7 +43,6 @@ object DatabaseModule {
                     )
                 }
             })
-            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -55,4 +57,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideSyncQueueDao(database: FocusDatabase): SyncQueueDao = database.syncQueueDao()
+
+    @Provides
+    @Singleton
+    fun provideFocusProfileDao(database: FocusDatabase): FocusProfileDao = database.focusProfileDao()
 }

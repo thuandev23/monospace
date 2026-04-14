@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface TaskRepository {
     fun observeTasks(listId: String): Flow<List<Task>>
+    fun observeAllTasksSortedByDate(): Flow<List<Task>>
     suspend fun getTaskById(taskId: String): Task?
     suspend fun saveTask(task: Task)
     suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean)

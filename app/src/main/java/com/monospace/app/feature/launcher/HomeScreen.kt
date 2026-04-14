@@ -59,6 +59,7 @@ import java.time.ZoneId
 @Composable
 fun HomeScreen(
     onNavigateToTask: (taskId: String) -> Unit = {},
+    onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -88,6 +89,7 @@ fun HomeScreen(
         onSearchQueryChange = viewModel::setSearchQuery,
         onClearSearch = viewModel::clearSearch,
         onNavigateToTask = onNavigateToTask,
+        onNavigateToLists = onNavigateToLists,
         initialShowSearch = initialShowSearch
     )
 }
@@ -110,6 +112,7 @@ fun HomeScreenContent(
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
+    onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
 ) {
     Scaffold(
@@ -177,6 +180,7 @@ fun HomeScreenContent(
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
                         onNavigateToTask = onNavigateToTask,
+                        onNavigateToLists = onNavigateToLists,
                         initialShowSearch = initialShowSearch
                     )
 
@@ -262,6 +266,7 @@ private fun SuccessContent(
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
+    onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { !it.isCompleted } }
@@ -284,6 +289,10 @@ private fun SuccessContent(
             onSelectedTasks = {
                 onSetSelectionMode(true)
                 onMenuToggle(false)
+            },
+            onNavigateToLists = {
+                onMenuToggle(false)
+                onNavigateToLists()
             }
         )
 

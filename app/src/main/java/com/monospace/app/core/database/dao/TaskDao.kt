@@ -51,4 +51,16 @@ interface TaskDao {
           AND start_date_time > :nowMs
     """)
     suspend fun getTasksWithFutureReminders(nowMs: Long): List<TaskEntity>
+
+    // Tất cả tasks không bị xóa, sắp xếp theo ngày (null cuối), dùng cho Upcoming view
+    @Query("""
+        SELECT * FROM tasks
+        WHERE sync_status != 'pending_delete'
+        ORDER BY
+            CASE WHEN start_date_time IS NULL THEN 1 ELSE 0 END ASC,
+            start_date_time ASC,
+            is_completed ASC,
+            priority DESC
+    """)
+    fun observeAllTasksSortedByDate(): Flow<List<TaskEntity>>
 }

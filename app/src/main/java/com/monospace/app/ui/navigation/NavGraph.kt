@@ -1,5 +1,7 @@
 package com.monospace.app.ui.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -10,6 +12,7 @@ import com.monospace.app.feature.detail.TaskDetailScreen
 import com.monospace.app.feature.launcher.HomeScreen
 import com.monospace.app.feature.settings.SettingsScreen
 import com.monospace.app.feature.tasks.TaskListScreen
+import com.monospace.app.feature.upcoming.UpcomingScreen
 
 sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
@@ -18,6 +21,7 @@ sealed class Screen(val route: String) {
         fun withSearch() = "home?showSearch=true"
         const val BASE = "home"
     }
+    object Upcoming : Screen("upcoming")
     object Tasks : Screen("tasks")
     object Settings : Screen("settings")
     object TaskDetail : Screen("task/{taskId}") {
@@ -25,6 +29,7 @@ sealed class Screen(val route: String) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MonospaceNavGraph(
     navController: NavHostController,
@@ -53,6 +58,16 @@ fun MonospaceNavGraph(
             val showSearch = backStackEntry.arguments?.getBoolean("showSearch") ?: false
             HomeScreen(
                 initialShowSearch = showSearch,
+                onNavigateToTask = { taskId ->
+                    navController.navigate(Screen.TaskDetail.withId(taskId))
+                },
+                onNavigateToLists = {
+                    navController.navigate(Screen.Tasks.route)
+                }
+            )
+        }
+        composable(Screen.Upcoming.route) {
+            UpcomingScreen(
                 onNavigateToTask = { taskId ->
                     navController.navigate(Screen.TaskDetail.withId(taskId))
                 }
