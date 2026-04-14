@@ -50,6 +50,7 @@ fun HomeTopBar(
     selectedCount: Int,
     onExitSelection: () -> Unit,
     onDeleteSelected: () -> Unit,
+    onSelectAll: () -> Unit,
     isMenuExpanded: Boolean,
     onMenuToggle: (Boolean) -> Unit,
     onSelectedTasks: () -> Unit
@@ -122,7 +123,7 @@ fun HomeTopBar(
                                 )
                             }
                         }
-                        TextButton(onClick = { /* Select All logic */ }) {
+                        TextButton(onClick = onSelectAll) {
                             Text(
                                 stringResource(R.string.action_select_all),
                                 style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary)

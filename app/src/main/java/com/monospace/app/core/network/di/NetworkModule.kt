@@ -1,5 +1,6 @@
 package com.monospace.app.core.network.di
 
+import com.monospace.app.core.auth.AuthInterceptor
 import com.monospace.app.core.network.api.TaskApiService
 import dagger.Module
 import dagger.Provides
@@ -21,11 +22,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

@@ -19,6 +19,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        // Đặt false khi chưa có backend. Khi backend sẵn sàng đổi thành true.
+        buildConfigField("boolean", "BACKEND_ENABLED", "false")
+
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -40,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -102,6 +106,10 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
+
+    // Kotlin Metadata
+    implementation(libs.kotlinx.metadata.jvm)
+    ksp(libs.kotlinx.metadata.jvm)
 
     // Debug
     debugImplementation(libs.leakcanary.android)

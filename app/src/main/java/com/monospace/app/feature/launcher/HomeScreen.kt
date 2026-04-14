@@ -15,12 +15,28 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -42,42 +58,69 @@ import java.time.ZoneId
 
 @Composable
 fun HomeScreen(
+    onNavigateToTask: (taskId: String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.errorEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     HomeScreenContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onToggleTask = viewModel::toggleTask,
         onAddTask = viewModel::addTask,
         onDeleteSelected = viewModel::deleteSelectedTasks,
+        onSelectAll = viewModel::selectAll,
         onSetSelectionMode = viewModel::setSelectionMode,
         onToggleTaskSelection = viewModel::toggleTaskSelection,
         onMenuToggle = viewModel::setMenuExpanded,
         onShowCreateSheet = viewModel::setShowCreateSheet,
         onShowDatePicker = viewModel::setShowDatePicker,
         onUpdateDraftSchedule = viewModel::updateDraftSchedule,
-        onUpdateDraftListId = viewModel::setDraftListId
+        onUpdateDraftListId = viewModel::setDraftListId,
+        onSearchQueryChange = viewModel::setSearchQuery,
+        onClearSearch = viewModel::clearSearch,
+        onNavigateToTask = onNavigateToTask
     )
 }
 
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onToggleTask: (String, Boolean) -> Unit,
     onAddTask: (String) -> Unit,
     onDeleteSelected: () -> Unit,
+    onSelectAll: () -> Unit,
     onSetSelectionMode: (Boolean) -> Unit,
     onToggleTaskSelection: (String) -> Unit,
     onMenuToggle: (Boolean) -> Unit,
     onShowCreateSheet: (Boolean) -> Unit,
     onShowDatePicker: (Boolean) -> Unit,
     onUpdateDraftSchedule: (startDate: java.time.Instant?, endDate: java.time.Instant?, isAllDay: Boolean, reminder: ReminderConfig?, repeat: RepeatConfig?) -> Unit,
-    onUpdateDraftListId: (String) -> Unit
+    onUpdateDraftListId: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onNavigateToTask: (taskId: String) -> Unit = {}
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = FocusTheme.colors.background,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = FocusTheme.colors.primary,
+                    contentColor = FocusTheme.colors.background
+                )
+            }
+        },
         floatingActionButton = {
             if (uiState is HomeUiState.Success && !uiState.isSelectionMode) {
                 FloatingActionButton(
@@ -123,10 +166,14 @@ fun HomeScreenContent(
                         state = uiState,
                         onToggleTask = onToggleTask,
                         onDeleteSelected = onDeleteSelected,
+                        onSelectAll = onSelectAll,
                         onSetSelectionMode = onSetSelectionMode,
                         onToggleTaskSelection = onToggleTaskSelection,
                         onMenuToggle = onMenuToggle,
-                        onShowCreateSheet = onShowCreateSheet
+                        onShowCreateSheet = onShowCreateSheet,
+                        onSearchQueryChange = onSearchQueryChange,
+                        onClearSearch = onClearSearch,
+                        onNavigateToTask = onNavigateToTask
                     )
 
                     if (uiState.showCreateSheet) {
@@ -166,17 +213,55 @@ fun HomeScreenContent(
 }
 
 @Composable
+private fun TaskSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text("Tìm task...", color = FocusTheme.colors.secondary) },
+        leadingIcon = {
+            Icon(Icons.Default.Search, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+        },
+        trailingIcon = {
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+            }
+        },
+        singleLine = true,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = FocusTheme.colors.primary,
+            unfocusedBorderColor = FocusTheme.colors.divider,
+            focusedTextColor = FocusTheme.colors.primary,
+            unfocusedTextColor = FocusTheme.colors.primary
+        )
+    )
+}
+
+@Composable
 private fun SuccessContent(
     state: HomeUiState.Success,
     onToggleTask: (String, Boolean) -> Unit,
     onDeleteSelected: () -> Unit,
+    onSelectAll: () -> Unit,
     onSetSelectionMode: (Boolean) -> Unit,
     onToggleTaskSelection: (String) -> Unit,
     onMenuToggle: (Boolean) -> Unit,
-    onShowCreateSheet: (Boolean) -> Unit
+    onShowCreateSheet: (Boolean) -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onNavigateToTask: (taskId: String) -> Unit = {}
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { !it.isCompleted } }
     val completedTasks = remember(state.tasks) { state.tasks.filter { it.isCompleted } }
+    var showSearchBar by remember { mutableStateOf(state.searchQuery.isNotBlank()) }
 
     Column(
         modifier = Modifier
@@ -188,6 +273,7 @@ private fun SuccessContent(
             selectedCount = state.selectedTaskIds.size,
             onExitSelection = { onSetSelectionMode(false) },
             onDeleteSelected = onDeleteSelected,
+            onSelectAll = onSelectAll,
             isMenuExpanded = state.isMenuExpanded,
             onMenuToggle = onMenuToggle,
             onSelectedTasks = {
@@ -197,6 +283,19 @@ private fun SuccessContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Search bar — hiện khi tap icon tìm kiếm hoặc đang có query
+        if (showSearchBar) {
+            TaskSearchBar(
+                query = state.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                onClose = {
+                    showSearchBar = false
+                    onClearSearch()
+                }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         if (state.tasks.isEmpty()) {
             Spacer(modifier = Modifier.weight(1f))
@@ -212,6 +311,8 @@ private fun SuccessContent(
                 onTaskClick = { task ->
                     if (state.isSelectionMode) {
                         onToggleTaskSelection(task.id)
+                    } else {
+                        onNavigateToTask(task.id)
                     }
                 },
                 onTaskLongClick = { task ->

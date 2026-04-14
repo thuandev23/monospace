@@ -13,6 +13,9 @@ interface TaskListDao {
     @Query("SELECT * FROM lists WHERE sync_status != 'pending_delete'")
     fun observeAllLists(): Flow<List<TaskListEntity>>
 
+    @Query("SELECT id FROM lists WHERE sync_status != 'pending_delete'")
+    suspend fun getAllListIds(): List<String>
+
     @Query("SELECT * FROM lists WHERE id = :id")
     suspend fun getListById(id: String): TaskListEntity?
 

@@ -41,4 +41,14 @@ interface TaskDao {
 
     @Query("UPDATE tasks SET sync_status = 'synced' WHERE id = :id")
     suspend fun markAsSynced(id: String)
+
+    // Lấy tasks có reminder và chưa hoàn thành, dùng cho BootReceiver re-schedule
+    @Query("""
+        SELECT * FROM tasks
+        WHERE reminder_value IS NOT NULL
+          AND is_completed = 0
+          AND sync_status != 'pending_delete'
+          AND start_date_time > :nowMs
+    """)
+    suspend fun getTasksWithFutureReminders(nowMs: Long): List<TaskEntity>
 }

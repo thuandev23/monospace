@@ -8,16 +8,20 @@ import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskList
-import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.domain.usecase.AddTaskUseCase
+import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
+import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -52,14 +56,21 @@ sealed interface HomeUiState {
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val getTasksUseCase: GetTasksUseCase,
     private val addTaskUseCase: AddTaskUseCase,
     private val toggleTaskUseCase: ToggleTaskUseCase,
-    private val repository: TaskRepository,
+    private val deleteTaskUseCase: DeleteTaskUseCase,
     private val taskListRepository: TaskListRepository
 ) : ViewModel() {
 
-    private val _currentListId = MutableStateFlow("default")
+    // One-shot error events → hiển thị Snackbar ở UI
+    private val _errorEvent = MutableSharedFlow<String>()
+    val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
+
+    private val _currentListId = MutableStateFlow(
+        savedStateHandle.get<String>("listId") ?: "default"
+    )
     private val _isSelectionMode = MutableStateFlow(false)
     private val _selectedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     private val _searchQuery = MutableStateFlow("")
@@ -94,12 +105,19 @@ class HomeViewModel @Inject constructor(
         _draftRepeat
     ) { args ->
         @Suppress("UNCHECKED_CAST")
+        val allTasks = args[0] as List<Task>
+        val query = args[4] as String
+        val filteredTasks = if (query.isBlank()) allTasks
+        else allTasks.filter { task ->
+            task.title.contains(query, ignoreCase = true) ||
+                task.notes?.contains(query, ignoreCase = true) == true
+        }
         HomeUiState.Success(
-            tasks = args[0] as List<Task>,
+            tasks = filteredTasks,
             availableLists = args[1] as List<TaskList>,
             isSelectionMode = args[2] as Boolean,
             selectedTaskIds = args[3] as Set<String>,
-            searchQuery = args[4] as String,
+            searchQuery = query,
             isMenuExpanded = args[5] as Boolean,
             showCreateSheet = args[6] as Boolean,
             showDatePicker = args[7] as Boolean,
@@ -137,7 +155,7 @@ class HomeViewModel @Inject constructor(
                 resetDraft()
                 setShowCreateSheet(false)
             } catch (e: Exception) {
-                // TODO: Handle error state
+                _errorEvent.emit("Không thể thêm task: ${e.message}")
             }
         }
     }
@@ -171,14 +189,29 @@ class HomeViewModel @Inject constructor(
 
     fun toggleTask(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            toggleTaskUseCase(taskId, isCompleted)
+            try {
+                toggleTaskUseCase(taskId, isCompleted)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+            }
         }
     }
 
     fun deleteSelectedTasks() {
         viewModelScope.launch {
-            _selectedTaskIds.value.forEach { id -> repository.deleteTask(id) }
-            setSelectionMode(false)
+            try {
+                _selectedTaskIds.value.forEach { id -> deleteTaskUseCase(id) }
+                setSelectionMode(false)
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể xóa task: ${e.message}")
+            }
+        }
+    }
+
+    fun selectAll() {
+        val currentState = uiState.value
+        if (currentState is HomeUiState.Success) {
+            _selectedTaskIds.value = currentState.tasks.map { it.id }.toSet()
         }
     }
 
@@ -199,4 +232,10 @@ class HomeViewModel @Inject constructor(
     fun setMenuExpanded(expanded: Boolean) = run { _isMenuExpanded.value = expanded }
     fun setShowCreateSheet(show: Boolean) = run { _showCreateSheet.value = show }
     fun setShowDatePicker(show: Boolean) = run { _showDatePicker.value = show }
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+    }
 }

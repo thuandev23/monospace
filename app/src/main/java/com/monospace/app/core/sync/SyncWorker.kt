@@ -8,6 +8,8 @@ import com.monospace.app.core.database.dao.SyncQueueDao
 import com.monospace.app.core.database.dao.TaskDao
 import com.monospace.app.core.network.api.TaskApiService
 import com.monospace.app.core.network.dto.toDto
+import com.monospace.app.core.domain.usecase.PullTasksUseCase
+import com.monospace.app.core.database.dao.TaskListDao
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -17,7 +19,9 @@ class SyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val syncQueueDao: SyncQueueDao,
     private val taskDao: TaskDao,
-    private val taskApiService: TaskApiService
+    private val taskListDao: TaskListDao,
+    private val taskApiService: TaskApiService,
+    private val pullTasksUseCase: PullTasksUseCase
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -29,6 +33,9 @@ class SyncWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        // Chưa có backend → không retry, return success để WorkManager không tốn tài nguyên
+        if (!com.monospace.app.BuildConfig.BACKEND_ENABLED) return Result.success()
+
         val pendingItems = syncQueueDao.getReadyItems(
             now = System.currentTimeMillis(),
             maxRetryCount = MAX_RETRY_COUNT
@@ -59,7 +66,23 @@ class SyncWorker @AssistedInject constructor(
             }
         }
 
+        if (!hasFailure) {
+            // Push xong → pull về để cập nhật data từ server (incremental sync)
+            pullFromServer()
+        }
+
         return if (hasFailure) Result.retry() else Result.success()
+    }
+
+    private suspend fun pullFromServer() {
+        try {
+            val lists = taskListDao.getAllListIds()
+            for (listId in lists) {
+                pullTasksUseCase(listId)
+            }
+        } catch (_: Exception) {
+            // Pull thất bại không ảnh hưởng kết quả push
+        }
     }
 
     private suspend fun handleCreate(taskId: String): Boolean {

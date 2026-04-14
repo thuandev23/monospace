@@ -23,6 +23,11 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    override suspend fun getTaskById(taskId: String): Task? {
+        return taskDao.getTaskById(taskId)?.toDomain()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun saveTask(task: Task) {
         taskDao.upsert(task.toEntity())
     }
@@ -33,5 +38,26 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun deleteTask(taskId: String) {
         taskDao.markAsDeleted(taskId)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override suspend fun mergeRemoteTasks(remoteTasks: List<Task>) {
+        for (remote in remoteTasks) {
+            val local = taskDao.getTaskById(remote.id)
+            when {
+                // Task chưa có local → insert thẳng từ server
+                local == null -> taskDao.upsert(remote.toEntity().copy(syncStatus = "synced"))
+
+                // Local đang có pending changes → giữ local, không ghi đè
+                local.syncStatus != "synced" -> continue
+
+                // Server mới hơn local → dùng server version
+                remote.toEntity().updatedAt > local.updatedAt ->
+                    taskDao.upsert(remote.toEntity().copy(syncStatus = "synced"))
+
+                // Local mới hơn hoặc bằng → giữ local
+                else -> continue
+            }
+        }
     }
 }

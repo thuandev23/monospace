@@ -44,11 +44,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -72,11 +75,14 @@ data class EditableListItem(
 )
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+
+    val savedOrder by viewModel.sidebarItemOrder.collectAsState()
+    val savedHidden by viewModel.sidebarHiddenItems.collectAsState()
 
     // Main Section Items
     var mainItems by remember {
@@ -162,6 +168,17 @@ fun SettingsScreen() {
                 EditableListItem("notion", "Connect to Notion", { NotionIcon() }, canReorder = false)
             )
         )
+    }
+
+    // Restore thứ tự và visibility từ DataStore khi lần đầu load
+    LaunchedEffect(savedOrder, savedHidden) {
+        if (savedOrder.isNotEmpty()) {
+            val ordered = savedOrder.mapNotNull { id -> mainItems.firstOrNull { it.id == id } }
+            val remaining = mainItems.filter { it.id !in savedOrder }
+            mainItems = (ordered + remaining).map { it.copy(isVisible = it.id !in savedHidden) }
+        } else if (savedHidden.isNotEmpty()) {
+            mainItems = mainItems.map { it.copy(isVisible = it.id !in savedHidden) }
+        }
     }
 
     fun <T> List<T>.move(from: Int, to: Int): List<T> {
@@ -396,17 +413,19 @@ fun SettingsScreen() {
                             EditListItemRow(
                                 item = item,
                                 onToggleVisibility = {
-                                    mainItems =
-                                        mainItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                    mainItems = mainItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                    viewModel.saveHiddenItems(mainItems.filter { !it.isVisible }.map { it.id }.toSet())
                                 },
                                 onDrag = { deltaY ->
                                     accumulatedDrag += deltaY
                                     if (accumulatedDrag > threshold && index < mainItems.size - 1) {
                                         mainItems = mainItems.move(index, index + 1)
                                         accumulatedDrag = 0f
+                                        viewModel.saveItemOrder(mainItems.map { it.id })
                                     } else if (accumulatedDrag < -threshold && index > 0) {
                                         mainItems = mainItems.move(index, index - 1)
                                         accumulatedDrag = 0f
+                                        viewModel.saveItemOrder(mainItems.map { it.id })
                                     }
                                 },
                                 onDragEnd = { accumulatedDrag = 0f }
