@@ -59,6 +59,7 @@ import java.time.ZoneId
 @Composable
 fun HomeScreen(
     onNavigateToTask: (taskId: String) -> Unit = {},
+    initialShowSearch: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -86,7 +87,8 @@ fun HomeScreen(
         onUpdateDraftListId = viewModel::setDraftListId,
         onSearchQueryChange = viewModel::setSearchQuery,
         onClearSearch = viewModel::clearSearch,
-        onNavigateToTask = onNavigateToTask
+        onNavigateToTask = onNavigateToTask,
+        initialShowSearch = initialShowSearch
     )
 }
 
@@ -107,7 +109,8 @@ fun HomeScreenContent(
     onUpdateDraftListId: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
-    onNavigateToTask: (taskId: String) -> Unit = {}
+    onNavigateToTask: (taskId: String) -> Unit = {},
+    initialShowSearch: Boolean = false
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -173,7 +176,8 @@ fun HomeScreenContent(
                         onShowCreateSheet = onShowCreateSheet,
                         onSearchQueryChange = onSearchQueryChange,
                         onClearSearch = onClearSearch,
-                        onNavigateToTask = onNavigateToTask
+                        onNavigateToTask = onNavigateToTask,
+                        initialShowSearch = initialShowSearch
                     )
 
                     if (uiState.showCreateSheet) {
@@ -257,11 +261,12 @@ private fun SuccessContent(
     onShowCreateSheet: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
-    onNavigateToTask: (taskId: String) -> Unit = {}
+    onNavigateToTask: (taskId: String) -> Unit = {},
+    initialShowSearch: Boolean = false
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { !it.isCompleted } }
     val completedTasks = remember(state.tasks) { state.tasks.filter { it.isCompleted } }
-    var showSearchBar by remember { mutableStateOf(state.searchQuery.isNotBlank()) }
+    var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
 
     Column(
         modifier = Modifier

@@ -82,6 +82,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler) // generates @HiltWorker entry points
     implementation(libs.androidx.hilt.navigation.compose)
 
     // WorkManager

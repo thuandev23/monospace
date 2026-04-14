@@ -13,8 +13,9 @@ import com.monospace.app.feature.tasks.TaskListScreen
 
 sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
-    object Home : Screen("home?listId={listId}") {
+    object Home : Screen("home?listId={listId}&showSearch={showSearch}") {
         fun withList(listId: String) = "home?listId=$listId"
+        fun withSearch() = "home?showSearch=true"
         const val BASE = "home"
     }
     object Tasks : Screen("tasks")
@@ -42,10 +43,16 @@ fun MonospaceNavGraph(
                 navArgument("listId") {
                     type = NavType.StringType
                     defaultValue = "default"
+                },
+                navArgument("showSearch") {
+                    type = NavType.BoolType
+                    defaultValue = false
                 }
             )
-        ) {
+        ) { backStackEntry ->
+            val showSearch = backStackEntry.arguments?.getBoolean("showSearch") ?: false
             HomeScreen(
+                initialShowSearch = showSearch,
                 onNavigateToTask = { taskId ->
                     navController.navigate(Screen.TaskDetail.withId(taskId))
                 }

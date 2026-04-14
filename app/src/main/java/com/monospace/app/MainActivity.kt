@@ -95,12 +95,11 @@ fun MainScreen() {
                             }
                         },
                         onSearchClick = {
-                            navController.navigate(Screen.Home.BASE) {
+                            navController.navigate(Screen.Home.withSearch()) {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                                    saveState = false
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                                launchSingleTop = false
                             }
                         },
                         onUpcomingClick = {
