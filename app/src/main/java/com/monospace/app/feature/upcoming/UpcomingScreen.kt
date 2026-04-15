@@ -1,7 +1,5 @@
 package com.monospace.app.feature.upcoming
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +42,6 @@ import com.monospace.app.R
 import com.monospace.app.feature.launcher.components.SwipeableTaskItem
 import com.monospace.app.ui.theme.FocusTheme
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpcomingScreen(

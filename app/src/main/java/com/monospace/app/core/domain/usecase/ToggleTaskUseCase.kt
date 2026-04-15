@@ -1,6 +1,5 @@
 package com.monospace.app.core.domain.usecase
 
-import android.os.Build
 import com.monospace.app.core.domain.repository.SyncOperationType
 import com.monospace.app.core.domain.repository.SyncQueue
 import com.monospace.app.core.domain.repository.TaskRepository
@@ -24,7 +23,7 @@ class ToggleTaskUseCase @Inject constructor(
         )
 
         // 3. Nếu vừa DONE và task có repeat → tạo instance tiếp theo
-        if (isCompleted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (isCompleted) {
             val task = repository.getTaskById(taskId)
             if (task?.repeat != null && task.status == com.monospace.app.core.domain.model.TaskStatus.DONE) {
                 expandRepeatTaskUseCase(task)

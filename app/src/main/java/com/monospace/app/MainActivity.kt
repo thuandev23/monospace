@@ -1,8 +1,6 @@
 package com.monospace.app
 
-import android.os.Build
 import android.os.Bundle
-import androidx.annotation.RequiresApi
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.monospace.app.feature.launcher.components.HomeBottomBar
 import com.monospace.app.feature.onboardings.OnboardingViewModel
+import com.monospace.app.feature.settings.TabBarSettingsViewModel
 import com.monospace.app.ui.navigation.MonospaceNavGraph
 import com.monospace.app.ui.navigation.Screen
 import com.monospace.app.ui.theme.FocusTheme
@@ -39,7 +38,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -51,7 +49,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -63,6 +60,9 @@ fun MainScreen() {
 
     val onboardingViewModel: OnboardingViewModel = hiltViewModel()
     val onboardingCompleted by onboardingViewModel.onboardingCompleted.collectAsState()
+
+    val tabBarViewModel: TabBarSettingsViewModel = hiltViewModel()
+    val tabBarSettings by tabBarViewModel.settings.collectAsState()
 
     // Wait until onboarding state is loaded, then navigate if needed
     LaunchedEffect(onboardingCompleted) {
@@ -78,7 +78,8 @@ fun MainScreen() {
         Screen.Home.route,
         Screen.Upcoming.route,
         Screen.Tasks.route,
-        Screen.Settings.route
+        Screen.Settings.route,
+        Screen.Search.route
     )
 
     Scaffold(
@@ -90,6 +91,8 @@ fun MainScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     HomeBottomBar(
+                        showUpcoming = tabBarSettings.showUpcoming,
+                        showSearch = tabBarSettings.showSearch,
                         onTodayClick = {
                             navController.navigate(Screen.Home.BASE) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -100,11 +103,12 @@ fun MainScreen() {
                             }
                         },
                         onSearchClick = {
-                            navController.navigate(Screen.Home.withSearch()) {
+                            navController.navigate(Screen.Search.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = false
+                                    saveState = true
                                 }
-                                launchSingleTop = false
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         },
                         onUpcomingClick = {

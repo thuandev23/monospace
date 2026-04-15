@@ -34,4 +34,15 @@ object DatabaseMigrations {
             )
         }
     }
+
+    /**
+     * v3 → v4: Thêm sort_order vào bảng lists để hỗ trợ drag-to-reorder.
+     */
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "ALTER TABLE lists ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"
+            )
+        }
+    }
 }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.ViewModule
@@ -71,6 +72,7 @@ fun HomeTopBar(
     onMenuToggle: (Boolean) -> Unit,
     onSelectedTasks: () -> Unit,
     onNavigateToLists: () -> Unit = {},
+    onFocusClick: () -> Unit = {},
     viewSettings: ViewSettings = ViewSettings(),
     onViewSettingsChange: (ViewSettings) -> Unit = {}
 ) {
@@ -111,16 +113,29 @@ fun HomeTopBar(
                     .wrapContentSize(Alignment.TopEnd)
             ) {
                 if (!isSelectionMode) {
-                    IconButton(
-                        onClick = { onMenuToggle(true) },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.content_desc_menu),
-                            modifier = Modifier.size(28.dp),
-                            tint = FocusTheme.colors.primary
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = onFocusClick,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.SelfImprovement,
+                                contentDescription = "Focus",
+                                modifier = Modifier.size(24.dp),
+                                tint = FocusTheme.colors.secondary
+                            )
+                        }
+                        IconButton(
+                            onClick = { onMenuToggle(true) },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.content_desc_menu),
+                                modifier = Modifier.size(28.dp),
+                                tint = FocusTheme.colors.primary
+                            )
+                        }
                     }
                     MonospaceDropdownMenu(
                         expanded = isMenuExpanded,

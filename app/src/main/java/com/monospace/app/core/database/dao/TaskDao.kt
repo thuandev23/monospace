@@ -52,6 +52,18 @@ interface TaskDao {
     """)
     suspend fun getTasksWithFutureReminders(nowMs: Long): List<TaskEntity>
 
+    // Đếm active tasks theo list
+    @Query("SELECT COUNT(*) FROM tasks WHERE list_id = :listId AND task_status != 'DONE' AND task_status != 'CANCELLED' AND sync_status != 'pending_delete'")
+    fun observeActiveTaskCountForList(listId: String): Flow<Int>
+
+    // Đếm tất cả active tasks
+    @Query("SELECT COUNT(*) FROM tasks WHERE task_status != 'DONE' AND task_status != 'CANCELLED' AND sync_status != 'pending_delete'")
+    fun observeAllActiveTaskCount(): Flow<Int>
+
+    // Đếm tasks hôm nay (start_date_time trong khoảng dayStart..dayEnd)
+    @Query("SELECT COUNT(*) FROM tasks WHERE task_status != 'DONE' AND task_status != 'CANCELLED' AND sync_status != 'pending_delete' AND start_date_time >= :dayStart AND start_date_time < :dayEnd")
+    fun observeTodayTaskCount(dayStart: Long, dayEnd: Long): Flow<Int>
+
     // Tất cả tasks không bị xóa, sắp xếp theo ngày (null cuối), dùng cho Upcoming view
     @Query("""
         SELECT * FROM tasks

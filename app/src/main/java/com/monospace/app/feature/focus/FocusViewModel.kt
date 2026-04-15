@@ -59,6 +59,12 @@ class FocusViewModel @Inject constructor(
     private val _events = MutableSharedFlow<FocusEvent>()
     val events: SharedFlow<FocusEvent> = _events.asSharedFlow()
 
+    // ── Timer state ──────────────────────────────────────────────────────────
+    private val _timerState = MutableStateFlow(FocusTimerState())
+    val timerState: StateFlow<FocusTimerState> = _timerState.asStateFlow()
+
+    private var timerJob: Job? = null
+
     val uiState: StateFlow<FocusUiState> = combine(
         focusRepo.observeAll(),
         focusRepo.observeActive(),
@@ -134,6 +140,40 @@ class FocusViewModel @Inject constructor(
             } catch (e: Exception) {
                 _events.emit(FocusEvent.Error("Không thể tắt: ${e.message}"))
             }
+        }
+    }
+
+    // ── Timer functions ───────────────────────────────────────────────────────
+
+    fun setFocusMode(mode: FocusMode) {
+        if (_timerState.value.isRunning) return
+        _timerState.update { it.copy(mode = mode) }
+    }
+
+    fun adjustDuration(deltaMinutes: Int) {
+        if (_timerState.value.isRunning) return
+        val newDuration = (_timerState.value.durationMinutes + deltaMinutes).coerceIn(1, 120)
+        _timerState.update { it.copy(durationMinutes = newDuration, remainingSeconds = newDuration * 60L) }
+    }
+
+    fun startFocus() {
+        val state = _timerState.value
+        if (state.isRunning) return
+        _timerState.update { it.copy(isRunning = true, isFinished = false, remainingSeconds = it.durationMinutes * 60L) }
+        timerJob = viewModelScope.launch {
+            while (_timerState.value.remainingSeconds > 0) {
+                delay(1000L)
+                _timerState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
+            }
+            _timerState.update { it.copy(isRunning = false, isFinished = true) }
+        }
+    }
+
+    fun stopFocus() {
+        timerJob?.cancel()
+        timerJob = null
+        _timerState.update {
+            it.copy(isRunning = false, isFinished = false, remainingSeconds = it.durationMinutes * 60L)
         }
     }
 

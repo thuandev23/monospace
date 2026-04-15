@@ -1,7 +1,5 @@
 package com.monospace.app.ui.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,7 +12,16 @@ import com.monospace.app.feature.focus.FocusScreen
 import com.monospace.app.feature.launcher.HomeScreen
 import com.monospace.app.feature.onboardings.OnboardingScreen
 import com.monospace.app.feature.onboardings.OnboardingViewModel
+import com.monospace.app.feature.search.SearchScreen
+import com.monospace.app.feature.paywall.ProUpgradeScreen
+import com.monospace.app.feature.settings.AboutScreen
+import com.monospace.app.feature.settings.GeneralSettingsScreen
+import com.monospace.app.feature.settings.NotionIntegrationScreen
+import com.monospace.app.feature.settings.RemindersIntegrationScreen
 import com.monospace.app.feature.settings.SettingsScreen
+import com.monospace.app.feature.settings.TabBarSettingsScreen
+import com.monospace.app.feature.settings.TaskDefaultScreen
+import com.monospace.app.feature.settings.WallpaperScreen
 import com.monospace.app.feature.tasks.TaskListScreen
 import com.monospace.app.feature.upcoming.UpcomingScreen
 
@@ -29,12 +36,20 @@ sealed class Screen(val route: String) {
     object Tasks : Screen("tasks")
     object Settings : Screen("settings")
     object Focus : Screen("focus")
+    object Search : Screen("search")
+    object TaskDefault : Screen("task_default")
+    object GeneralSettings : Screen("general_settings")
+    object Wallpaper : Screen("wallpaper")
+    object About : Screen("about")
+    object TabBarSettings : Screen("tab_bar_settings")
+    object ProUpgrade : Screen("pro_upgrade")
+    object NotionIntegration : Screen("notion_integration")
+    object RemindersIntegration : Screen("reminders_integration")
     object TaskDetail : Screen("task/{taskId}") {
         fun withId(taskId: String) = "task/$taskId"
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MonospaceNavGraph(
     navController: NavHostController,
@@ -92,17 +107,74 @@ fun MonospaceNavGraph(
                     navController.navigate(Screen.Home.withList(listId)) {
                         launchSingleTop = true
                     }
+                },
+                onTodayClick = {
+                    navController.navigate(Screen.Home.BASE) {
+                        launchSingleTop = true
+                    }
+                },
+                onUpcomingClick = {
+                    navController.navigate(Screen.Upcoming.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onAllClick = {
+                    navController.navigate(Screen.Home.withList("all")) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateToFocus = { navController.navigate(Screen.Focus.route) },
-                onNavigateToLists = { navController.navigate(Screen.Tasks.route) }
+                onNavigateToLists = { navController.navigate(Screen.Tasks.route) },
+                onNavigateToTaskDefault = { navController.navigate(Screen.TaskDefault.route) },
+                onNavigateToGeneral = { navController.navigate(Screen.GeneralSettings.route) },
+                onNavigateToWallpaper = { navController.navigate(Screen.Wallpaper.route) },
+                onNavigateToAbout = { navController.navigate(Screen.About.route) },
+                onNavigateToTabBar = { navController.navigate(Screen.TabBarSettings.route) },
+                onNavigateToNotion = { navController.navigate(Screen.NotionIntegration.route) },
+                onNavigateToReminders = { navController.navigate(Screen.RemindersIntegration.route) },
+                onNavigateToProUpgrade = { navController.navigate(Screen.ProUpgrade.route) }
             )
+        }
+        composable(Screen.TaskDefault.route) {
+            TaskDefaultScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.GeneralSettings.route) {
+            GeneralSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.Wallpaper.route) {
+            WallpaperScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.About.route) {
+            AboutScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.TabBarSettings.route) {
+            TabBarSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.ProUpgrade.route) {
+            ProUpgradeScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.NotionIntegration.route) {
+            NotionIntegrationScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.RemindersIntegration.route) {
+            RemindersIntegrationScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Screen.Focus.route) {
             FocusScreen()
+        }
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onNavigateToTask = { taskId ->
+                    navController.navigate(Screen.TaskDetail.withId(taskId))
+                },
+                onNavigateToCreateTask = {
+                    navController.navigate(Screen.Home.BASE)
+                }
+            )
         }
         composable(
             route = Screen.TaskDetail.route,

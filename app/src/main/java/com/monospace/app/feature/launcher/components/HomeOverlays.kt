@@ -89,6 +89,8 @@ import com.monospace.app.core.domain.model.ReminderUnit
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.core.domain.model.TaskList
+import com.monospace.app.feature.focus.FocusMode
+import com.monospace.app.feature.focus.FocusTimerState
 import com.monospace.app.ui.theme.FocusTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.time.Instant
@@ -105,7 +107,9 @@ fun CreateTaskSheet(
     onTodayClick: () -> Unit,
     availableLists: List<TaskList> = emptyList(),
     currentListId: String = "default",
-    onListSelected: (String) -> Unit = {}
+    onListSelected: (String) -> Unit = {},
+    draftStartDate: Instant? = null,
+    draftIsAllDay: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState()
     var taskTitle by remember { mutableStateOf("") }
@@ -188,7 +192,16 @@ fun CreateTaskSheet(
 
                     TaskOptionChip(
                         icon = Icons.Default.DateRange,
-                        label = stringResource(R.string.label_today),
+                        label = draftStartDate?.let { instant ->
+                            val zone = ZoneId.systemDefault()
+                            val date = instant.atZone(zone).toLocalDate()
+                            val today = LocalDate.now()
+                            when (date) {
+                                today -> stringResource(R.string.label_today)
+                                today.plusDays(1) -> stringResource(R.string.label_tomorrow)
+                                else -> date.format(DateTimeFormatter.ofPattern("MMM d"))
+                            }
+                        } ?: stringResource(R.string.label_date),
                         onClick = onTodayClick
                     )
                     TaskOptionChip(
@@ -239,24 +252,37 @@ fun TaskOptionChip(icon: ImageVector, label: String, onClick: () -> Unit) {
 @Composable
 fun MinimalCalendarDialog(
     onDismiss: () -> Unit,
-    onConfigSave: (startDate: LocalDate, startTime: LocalTime?, endDate: LocalDate?, endTime: LocalTime?, reminder: ReminderConfig?, repeat: RepeatConfig?) -> Unit
+    onConfigSave: (startDate: LocalDate, startTime: LocalTime?, endDate: LocalDate?, endTime: LocalTime?, reminder: ReminderConfig?, repeat: RepeatConfig?) -> Unit,
+    onNoDate: () -> Unit = {},
+    initialStart: Instant? = null,
+    initialEnd: Instant? = null,
+    initialIsAllDay: Boolean = true,
+    initialReminder: ReminderConfig? = null,
+    initialRepeat: RepeatConfig? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val zone = ZoneId.systemDefault()
 
-    // Logic States
-    var startDate by remember { mutableStateOf(LocalDate.now()) }
-    var startTime by remember { mutableStateOf(LocalTime.now().withSecond(0).withNano(0)) }
-    var endDate by remember { mutableStateOf(LocalDate.now()) }
+    // Pre-populate from existing draft when provided
+    var startDate by remember {
+        mutableStateOf(initialStart?.atZone(zone)?.toLocalDate() ?: LocalDate.now())
+    }
+    var startTime by remember {
+        mutableStateOf(initialStart?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)
+            ?: LocalTime.of(9, 0))
+    }
+    var endDate by remember {
+        mutableStateOf(initialEnd?.atZone(zone)?.toLocalDate() ?: LocalDate.now())
+    }
     var endTime by remember {
-        mutableStateOf(
-            LocalTime.now().plusHours(1).withSecond(0).withNano(0)
-        )
+        mutableStateOf(initialEnd?.atZone(zone)?.toLocalTime()?.withSecond(0)?.withNano(0)
+            ?: LocalTime.of(10, 0))
     }
 
-    var isTimeEnabled by remember { mutableStateOf(false) }
-    var isDurationEnabled by remember { mutableStateOf(false) }
-    var reminderConfig by remember { mutableStateOf<ReminderConfig?>(null) }
-    var repeatConfig by remember { mutableStateOf<RepeatConfig?>(null) }
+    var isTimeEnabled by remember { mutableStateOf(!initialIsAllDay) }
+    var isDurationEnabled by remember { mutableStateOf(initialEnd != null) }
+    var reminderConfig by remember { mutableStateOf<ReminderConfig?>(initialReminder) }
+    var repeatConfig by remember { mutableStateOf<RepeatConfig?>(initialRepeat) }
 
     // Dialog Controls
     var showDatePicker by remember { mutableStateOf(false) }
@@ -344,7 +370,7 @@ fun MinimalCalendarDialog(
                             Modifier.weight(1f),
                             Icons.Default.Close,
                             stringResource(R.string.label_no_date),
-                            {},
+                            { onNoDate(); onDismiss() },
                             FocusTheme.colors.destructive
                         )
                     }
@@ -357,7 +383,7 @@ fun MinimalCalendarDialog(
                         Column {
                             DateSettingsItem(
                                 icon = Icons.Default.DateRange,
-                                label = stringResource(R.string.label_start),
+                                label = if (isDurationEnabled) stringResource(R.string.label_start) else stringResource(R.string.label_date),
                                 value = formatDateTime(
                                     startDate,
                                     if (isTimeEnabled) startTime else null
@@ -426,8 +452,7 @@ fun MinimalCalendarDialog(
                             DateSettingsItem(
                                 icon = Icons.Default.Notifications,
                                 label = stringResource(R.string.label_reminder),
-                                value = reminderConfig?.let { "${it.value} ${it.unit.name.lowercase()}" }
-                                    ?: "None",
+                                value = formatReminder(reminderConfig),
                                 showArrow = true,
                                 onClick = { showReminderMenu = true }
                             )
@@ -438,8 +463,7 @@ fun MinimalCalendarDialog(
                             DateSettingsItem(
                                 icon = Icons.Default.Sync,
                                 label = stringResource(R.string.label_repeat),
-                                value = repeatConfig?.let { "Every ${it.interval} ${it.unit.name.lowercase()}" }
-                                    ?: "None",
+                                value = formatRepeat(repeatConfig),
                                 showArrow = true,
                                 onClick = { showRepeatMenu = true }
                             )
@@ -504,9 +528,14 @@ fun MinimalCalendarDialog(
                 TextButton(onClick = {
                     state.selectedDateMillis?.let {
                         val s = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())
-                            .toLocalDate(); if (pickingTarget == "START") startDate =
-                        s else endDate = s
-                    }; showDatePicker = false; if (isTimeEnabled) showTimePicker = true
+                            .toLocalDate(); if (pickingTarget == "START") {
+                                startDate = s
+                                if (endDate.isBefore(startDate)) endDate = startDate
+                            } else {
+                                endDate = s
+                                if (startDate.isAfter(endDate)) startDate = endDate
+                            }
+                    }; showDatePicker = false
                 }) { Text("OK") }
             }) { DatePicker(state = state) }
     }
@@ -559,37 +588,24 @@ fun ReminderSelectionDialog(
                 ReminderOptionItem("None", onClick = { onReminderSelected(null) })
                 ReminderOptionItem(
                     "On the day (09:00)",
-                    onClick = {
-                        onReminderSelected(
-                            ReminderConfig(
-                                0,
-                                ReminderUnit.DAY,
-                                LocalTime.of(9, 0)
-                            )
-                        )
-                    })
+                    onClick = { onReminderSelected(ReminderConfig(0, ReminderUnit.DAY, LocalTime.of(9, 0))) }
+                )
                 ReminderOptionItem(
                     "1 day before (09:00)",
-                    onClick = {
-                        onReminderSelected(
-                            ReminderConfig(
-                                1,
-                                ReminderUnit.DAY,
-                                LocalTime.of(9, 0)
-                            )
-                        )
-                    })
+                    onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.DAY, LocalTime.of(9, 0))) }
+                )
+                ReminderOptionItem(
+                    "2 days before (09:00)",
+                    onClick = { onReminderSelected(ReminderConfig(2, ReminderUnit.DAY, LocalTime.of(9, 0))) }
+                )
                 ReminderOptionItem(
                     "1 week before (09:00)",
-                    onClick = {
-                        onReminderSelected(
-                            ReminderConfig(
-                                1,
-                                ReminderUnit.WEEK,
-                                LocalTime.of(9, 0)
-                            )
-                        )
-                    })
+                    onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.WEEK, LocalTime.of(9, 0))) }
+                )
+                ReminderOptionItem(
+                    "1 month before (09:00)",
+                    onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.MONTH, LocalTime.of(9, 0))) }
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     color = FocusTheme.colors.divider
@@ -618,15 +634,10 @@ fun RepeatSelectionDialog(
         ) {
             Column(modifier = Modifier.padding(vertical = 16.dp)) {
                 ReminderOptionItem("None", onClick = { onRepeatSelected(null) })
-                ReminderOptionItem(
-                    "Daily",
-                    onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.DAY)) })
-                ReminderOptionItem(
-                    "Weekly",
-                    onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.WEEK)) })
-                ReminderOptionItem(
-                    "Monthly",
-                    onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.MONTH)) })
+                ReminderOptionItem("Daily", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.DAY)) })
+                ReminderOptionItem("Weekly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.WEEK)) })
+                ReminderOptionItem("Monthly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.MONTH)) })
+                ReminderOptionItem("Yearly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.YEAR)) })
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     color = FocusTheme.colors.divider
@@ -644,6 +655,7 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
     var count by remember { mutableStateOf(1) }
     var unit by remember { mutableStateOf(ReminderUnit.DAY) }
     var time by remember { mutableStateOf(LocalTime.of(9, 0)) }
+    var isBefore by remember { mutableStateOf(true) }
     var showTP by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
@@ -673,7 +685,7 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                     "Custom Reminder",
                     style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold)
                 )
-                TextButton(onClick = { onDone(ReminderConfig(count, unit, time)) }) {
+                TextButton(onClick = { onDone(ReminderConfig(count, unit, time, isBefore)) }) {
                     Text(
                         "Done",
                         color = FocusTheme.colors.primary,
@@ -698,18 +710,20 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Picker(
-                            items = (0..30).map { it.toString() },
+                            items = (0..60).map { it.toString() },
                             initialIndex = 1,
                             onItemSelected = { count = it.toInt() })
                         Picker(
                             items = ReminderUnit.entries.map {
-                                it.name.lowercase().replaceFirstChar { it.uppercase() }
+                                it.name.lowercase().replaceFirstChar { char -> char.uppercase() }
                             },
                             initialIndex = 2,
                             onItemSelected = { unit = ReminderUnit.valueOf(it.uppercase()) })
-                        Text(
-                            "Before",
-                            style = FocusTheme.typography.body.copy(fontWeight = FontWeight.Bold)
+                        
+                        Picker(
+                            items = listOf("Before", "After"),
+                            initialIndex = if (isBefore) 0 else 1,
+                            onItemSelected = { isBefore = it == "Before" }
                         )
                     }
                     HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.5f))
@@ -718,17 +732,20 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                             .fillMaxWidth()
                             .clickable { showTP = true }
                             .padding(vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Time"); Surface(
-                        color = FocusTheme.colors.surfaceAlt,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            time.format(DateTimeFormatter.ofPattern("HH:mm")),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                        )
-                    }
+                        Text("Time", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                        Surface(
+                            color = FocusTheme.colors.surfaceAlt,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                time.format(DateTimeFormatter.ofPattern("HH:mm")),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                style = FocusTheme.typography.label
+                            )
+                        }
                     }
                 }
             }
@@ -768,7 +785,7 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var interval by remember { mutableStateOf(1) }
     var unit by remember { mutableStateOf(RepeatUnit.WEEK) }
-    var selectedDays by remember { mutableStateOf(setOf(1)) } // Mon=1, Sun=7
+    var selectedDays by remember { mutableStateOf(setOf<Int>()) } // Mon=1, Sun=7
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -779,7 +796,8 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
     ) {
         Column(modifier = Modifier
             .fillMaxSize()
-            .navigationBarsPadding()) {
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -825,23 +843,28 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                     ) {
                         Text(
                             "Every",
-                            style = FocusTheme.typography.body.copy(fontWeight = FontWeight.Bold)
+                            style = FocusTheme.typography.body.copy(fontWeight = FontWeight.Bold, color = FocusTheme.colors.primary)
                         )
                         Picker(
                             items = (1..30).map { it.toString() },
-                            initialIndex = 0,
+                            initialIndex = interval - 1,
                             onItemSelected = { interval = it.toInt() })
                         Picker(
                             items = RepeatUnit.entries.map {
-                                it.name.lowercase().replaceFirstChar { it.uppercase() }
+                                it.name.lowercase().replaceFirstChar { char -> char.uppercase() }
                             },
-                            initialIndex = 1,
+                            initialIndex = unit.ordinal,
                             onItemSelected = { unit = RepeatUnit.valueOf(it.uppercase()) })
                     }
                 }
             }
             if (unit == RepeatUnit.WEEK) {
                 Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "On days",
+                    style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary),
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
                 Surface(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
@@ -866,13 +889,18 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                                     .fillMaxWidth()
                                     .clickable { if (selectedDays.contains(dayIdx)) selectedDays -= dayIdx else selectedDays += dayIdx }
                                     .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(name); if (selectedDays.contains(dayIdx)) Icon(
-                                Icons.Default.Check,
-                                null,
-                                tint = FocusTheme.colors.primary
-                            )
+                                Text(name, style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                                if (selectedDays.contains(dayIdx)) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        null,
+                                        tint = FocusTheme.colors.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                             if (index < dayNames.size - 1) HorizontalDivider(
                                 modifier = Modifier.padding(
@@ -883,6 +911,7 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -895,7 +924,11 @@ fun Picker(items: List<String>, initialIndex: Int, onItemSelected: (String) -> U
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { onItemSelected(items[it]) }
+            .collect { 
+                if (it in items.indices) {
+                    onItemSelected(items[it])
+                }
+            }
     }
 
     Box(modifier = Modifier
@@ -967,7 +1000,7 @@ fun ReminderOptionItem(
                     modifier = Modifier.size(18.dp)
                 ); Spacer(modifier = Modifier.width(12.dp))
             }
-            Text(text, style = FocusTheme.typography.body.copy(fontSize = 15.sp))
+            Text(text, style = FocusTheme.typography.body.copy(fontSize = 15.sp, color = FocusTheme.colors.primary))
         }
     }
 }
@@ -1177,7 +1210,7 @@ fun SelectionDialog(
             Column(modifier = Modifier.padding(vertical = 16.dp)) {
                 Text(
                     text = title,
-                    style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold),
+                    style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold, color = FocusTheme.colors.primary),
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                 )
                 options.forEach { option ->
@@ -1195,6 +1228,32 @@ fun SelectionDialog(
 private fun formatDateTime(date: LocalDate, time: LocalTime?): String {
     val d = date.format(DateTimeFormatter.ofPattern("d MMM yyyy"))
     return if (time != null) "$d, ${time.format(DateTimeFormatter.ofPattern("HH:mm"))}" else d
+}
+
+private fun formatReminder(reminder: ReminderConfig?): String {
+    if (reminder == null) return "None"
+    val unitStr = when (reminder.unit) {
+        ReminderUnit.MINUTE -> "min"
+        ReminderUnit.HOUR -> "hour"
+        ReminderUnit.DAY -> "day"
+        ReminderUnit.WEEK -> "week"
+        ReminderUnit.MONTH -> "month"
+    }
+    val plural = if (reminder.value > 1) "s" else ""
+    val relation = if (reminder.isBefore) "before" else "after"
+    return if (reminder.value == 0) "On the day" else "${reminder.value} $unitStr$plural $relation"
+}
+
+private fun formatRepeat(repeat: RepeatConfig?): String {
+    if (repeat == null) return "None"
+    val unitStr = when (repeat.unit) {
+        RepeatUnit.DAY -> "day"
+        RepeatUnit.WEEK -> "week"
+        RepeatUnit.MONTH -> "month"
+        RepeatUnit.YEAR -> "year"
+    }
+    val plural = if (repeat.interval > 1) "s" else ""
+    return "Every ${repeat.interval} $unitStr$plural"
 }
 
 @Composable
@@ -1270,7 +1329,7 @@ private fun DateSettingsItem(
                 ) {
                     Text(
                         text = value,
-                        style = FocusTheme.typography.label,
+                        style = FocusTheme.typography.label.copy(color = FocusTheme.colors.primary),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1572,4 +1631,226 @@ fun RescheduleSheet(
             onConfirm(start, end, isAllDay, reminder, repeat)
         }
     )
+}
+
+// ─── Focus Session Sheet ──────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FocusSessionSheet(
+    timerState: FocusTimerState,
+    onDismiss: () -> Unit,
+    onSetMode: (FocusMode) -> Unit,
+    onAdjustDuration: (Int) -> Unit,
+    onStartFocus: () -> Unit,
+    onStopFocus: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = FocusTheme.colors.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Handle + title
+            Text(
+                "Focus",
+                style = FocusTheme.typography.title.copy(
+                    color = FocusTheme.colors.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+
+            HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
+
+            // Mode selector
+            FocusModeSelector(
+                selectedMode = timerState.mode,
+                enabled = !timerState.isRunning,
+                onModeSelected = onSetMode
+            )
+
+            // Timer display / controls
+            when (timerState.mode) {
+                FocusMode.TIMER -> {
+                    FocusTimerDisplay(
+                        timerState = timerState,
+                        onAdjustDuration = onAdjustDuration
+                    )
+                }
+                FocusMode.STOPWATCH -> {
+                    val elapsed = timerState.durationMinutes * 60L - timerState.remainingSeconds
+                    Text(
+                        formatSeconds(elapsed),
+                        style = FocusTheme.typography.title.copy(fontSize = 56.sp,
+                            color = FocusTheme.colors.primary
+                        )
+                    )
+                }
+                FocusMode.DISPLAY_CLOCK -> {
+                    val now = java.time.LocalTime.now()
+                    Text(
+                        now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                        style = FocusTheme.typography.title.copy(fontSize = 56.sp,
+                            color = FocusTheme.colors.primary
+                        )
+                    )
+                }
+                FocusMode.MINIMAL -> {
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+
+            // Finished label
+            if (timerState.isFinished) {
+                Text(
+                    "Session complete!",
+                    style = FocusTheme.typography.headline.copy(
+                        color = FocusTheme.colors.success
+                    )
+                )
+            }
+
+            // Start / Stop button
+            androidx.compose.material3.Button(
+                onClick = if (timerState.isRunning) onStopFocus else onStartFocus,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = if (timerState.isRunning) FocusTheme.colors.destructive
+                                     else FocusTheme.colors.primary
+                )
+            ) {
+                Text(
+                    if (timerState.isRunning) "Stop Focus" else "Start Focus",
+                    style = FocusTheme.typography.headline.copy(
+                        color = FocusTheme.colors.background
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FocusModeSelector(
+    selectedMode: FocusMode,
+    enabled: Boolean,
+    onModeSelected: (FocusMode) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val modeLabels = mapOf(
+        FocusMode.MINIMAL to "Minimal",
+        FocusMode.DISPLAY_CLOCK to "Display Clock",
+        FocusMode.STOPWATCH to "Stopwatch",
+        FocusMode.TIMER to "Timer"
+    )
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(FocusTheme.colors.background)
+                .clickable(enabled = enabled) { expanded = true }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                modeLabels[selectedMode] ?: "Timer",
+                style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary)
+            )
+            Icon(
+                Icons.Default.KeyboardArrowUp,
+                contentDescription = null,
+                tint = FocusTheme.colors.secondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(FocusTheme.colors.surface)
+        ) {
+            FocusMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            modeLabels[mode] ?: mode.name,
+                            color = if (mode == selectedMode) FocusTheme.colors.primary
+                                    else FocusTheme.colors.secondary
+                        )
+                    },
+                    trailingIcon = {
+                        if (mode == selectedMode) {
+                            Icon(Icons.Default.Check, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(16.dp))
+                        }
+                    },
+                    onClick = { onModeSelected(mode); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FocusTimerDisplay(
+    timerState: FocusTimerState,
+    onAdjustDuration: (Int) -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            formatSeconds(timerState.remainingSeconds),
+            style = FocusTheme.typography.title.copy(fontSize = 56.sp,
+                color = FocusTheme.colors.primary
+            )
+        )
+        if (!timerState.isRunning) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { onAdjustDuration(-5) },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(FocusTheme.colors.background)
+                ) {
+                    Text("−", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+                }
+                Text(
+                    "${timerState.durationMinutes} min",
+                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
+                )
+                IconButton(
+                    onClick = { onAdjustDuration(5) },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(FocusTheme.colors.background)
+                ) {
+                    Text("+", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+                }
+            }
+        }
+    }
+}
+
+private fun formatSeconds(totalSeconds: Long): String {
+    val m = totalSeconds / 60
+    val s = totalSeconds % 60
+    return "%02d:%02d".format(m, s)
 }

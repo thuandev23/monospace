@@ -1,8 +1,6 @@
 package com.monospace.app.core.sync
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -27,7 +25,6 @@ class ReminderScheduler @Inject constructor(
      * Schedule reminder cho một task.
      * Tự tính thời điểm thông báo = startDateTime - reminderOffset.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     fun scheduleReminder(task: Task) {
         val reminder = task.reminder ?: return
         val start = task.startDateTime ?: return
@@ -61,7 +58,6 @@ class ReminderScheduler @Inject constructor(
         WorkManager.getInstance(context).cancelUniqueWork("reminder_$taskId")
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun calculateReminderInstant(start: Instant, reminder: ReminderConfig): Instant? {
         // Kết hợp ngày từ startDateTime + giờ từ remindTime
         val zone = ZoneId.systemDefault()
@@ -78,6 +74,7 @@ class ReminderScheduler @Inject constructor(
             ReminderUnit.HOUR   -> remindZdt.minusHours(reminder.value.toLong()).toInstant()
             ReminderUnit.DAY    -> remindZdt.minusDays(reminder.value.toLong()).toInstant()
             ReminderUnit.WEEK   -> remindZdt.minusWeeks(reminder.value.toLong()).toInstant()
+            ReminderUnit.MONTH  -> remindZdt.minusMonths(reminder.value.toLong()).toInstant()
         }
     }
 }

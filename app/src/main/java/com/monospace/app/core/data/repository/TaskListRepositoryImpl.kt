@@ -26,12 +26,17 @@ class TaskListRepositoryImpl @Inject constructor(
     override suspend fun deleteList(id: String) {
         taskListDao.markAsDeleted(id)
     }
+
+    override suspend fun updateSortOrder(id: String, order: Int) {
+        taskListDao.updateSortOrder(id, order)
+    }
 }
 
 private fun TaskListEntity.toDomain(): TaskList {
     return TaskList(
         id = this.id,
         name = this.name,
+        sortOrder = this.sortOrder,
         syncStatus = when (this.syncStatus) {
             "synced" -> SyncStatus.SYNCED
             "pending_create" -> SyncStatus.PENDING_CREATE
@@ -46,6 +51,7 @@ private fun TaskList.toEntity(): TaskListEntity {
     return TaskListEntity(
         id = this.id,
         name = this.name,
+        sortOrder = this.sortOrder,
         syncStatus = when (this.syncStatus) {
             SyncStatus.SYNCED -> "synced"
             SyncStatus.PENDING_CREATE -> "pending_create"

@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.monospace.app.BuildConfig
 import com.monospace.app.core.auth.AuthInterceptor
+import com.monospace.app.core.network.api.NotionApiService
 import com.monospace.app.core.network.api.TaskApiService
 import dagger.Module
 import dagger.Provides
@@ -56,5 +57,20 @@ object NetworkModule {
     @Singleton
     fun provideTaskApiService(retrofit: Retrofit): TaskApiService {
         return retrofit.create(TaskApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotionApiService(): NotionApiService {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+        return Retrofit.Builder()
+            .baseUrl("https://api.notion.com/v1/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(NotionApiService::class.java)
     }
 }

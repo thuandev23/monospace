@@ -1,7 +1,5 @@
 package com.monospace.app.feature.upcoming
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.Task
@@ -40,7 +38,6 @@ sealed interface UpcomingUiState {
     ) : UpcomingUiState
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @HiltViewModel
 class UpcomingViewModel @Inject constructor(
     private val taskRepository: TaskRepository,

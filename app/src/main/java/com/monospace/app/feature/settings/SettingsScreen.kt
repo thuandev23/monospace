@@ -29,7 +29,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tab
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -52,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,6 +87,14 @@ data class EditableListItem(
 fun SettingsScreen(
     onNavigateToFocus: () -> Unit = {},
     onNavigateToLists: () -> Unit = {},
+    onNavigateToTaskDefault: () -> Unit = {},
+    onNavigateToProUpgrade: () -> Unit = {},
+    onNavigateToGeneral: () -> Unit = {},
+    onNavigateToWallpaper: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToTabBar: () -> Unit = {},
+    onNavigateToNotion: () -> Unit = {},
+    onNavigateToReminders: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -347,6 +361,61 @@ fun SettingsScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Pro upgrade banner
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(FocusTheme.colors.primary)
+                    .clickable { onNavigateToProUpgrade() }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Monospace Pro",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.background,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    )
+                    Text(
+                        "7 days left in trial",
+                        style = FocusTheme.typography.caption.copy(
+                            color = FocusTheme.colors.background.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(FocusTheme.colors.background.copy(alpha = 0.15f))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        null,
+                        tint = FocusTheme.colors.background,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        "Upgrade",
+                        style = FocusTheme.typography.label.copy(
+                            color = FocusTheme.colors.background,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Main Tasks Section
             Surface(
                 color = FocusTheme.colors.surface,
@@ -475,11 +544,10 @@ fun SettingsScreen(
                                 }
                             )
                         } else {
-                            // Reminders — coming soon
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                badge = stringResource(R.string.label_coming_soon)
+                                onClick = onNavigateToReminders
                             )
                         }
                         if (index < itemsToRender.size - 1) {
@@ -492,6 +560,29 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Task Default Section
+            SectionHeader(title = "Task Default")
+            Surface(
+                color = FocusTheme.colors.surface,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingItem(
+                    icon = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.List,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    title = "Task Default",
+                    onClick = onNavigateToTaskDefault
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -539,11 +630,10 @@ fun SettingsScreen(
                                 }
                             )
                         } else {
-                            // Notion — coming soon
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                badge = stringResource(R.string.label_coming_soon)
+                                onClick = onNavigateToNotion
                             )
                         }
                         if (index < itemsToRender.size - 1) {
@@ -556,6 +646,93 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // General Settings Section
+            SectionHeader(title = "General")
+            Surface(
+                color = FocusTheme.colors.surface,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Tune,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    title = "General",
+                    onClick = onNavigateToGeneral
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Appearance Section (Wallpapers + Tab Bar)
+            SectionHeader(title = "Appearance")
+            Surface(
+                color = FocusTheme.colors.surface,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    SettingItem(
+                        icon = {
+                            Icon(
+                                Icons.Default.Image,
+                                null,
+                                tint = FocusTheme.colors.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        },
+                        title = "Wallpapers",
+                        onClick = onNavigateToWallpaper
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp, end = 16.dp),
+                        color = FocusTheme.colors.divider.copy(alpha = 0.3f)
+                    )
+                    SettingItem(
+                        icon = {
+                            Icon(
+                                Icons.Default.Tab,
+                                null,
+                                tint = FocusTheme.colors.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        },
+                        title = "Tab Bar",
+                        onClick = onNavigateToTabBar
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // About Section
+            SectionHeader(title = "Info")
+            Surface(
+                color = FocusTheme.colors.surface,
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Info,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    title = "About",
+                    onClick = onNavigateToAbout
+                )
             }
 
             Spacer(modifier = Modifier.height(64.dp))

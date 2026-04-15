@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.monospace.app"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -113,6 +113,9 @@ dependencies {
     // Kotlin Metadata
     implementation(libs.kotlinx.metadata.jvm)
     ksp(libs.kotlinx.metadata.jvm)
+
+    // Google Play Billing
+    implementation(libs.billing)
 
     // Debug
     debugImplementation(libs.leakcanary.android)

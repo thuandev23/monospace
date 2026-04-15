@@ -3,7 +3,6 @@ package com.monospace.app.core.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.monospace.app.core.data.mapper.toDomain
 import com.monospace.app.core.database.dao.TaskDao
 import com.monospace.app.core.sync.ReminderScheduler
@@ -31,11 +30,9 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val tasks = taskDao.getTasksWithFutureReminders(System.currentTimeMillis())
-                    tasks.forEach { entity ->
-                        reminderScheduler.scheduleReminder(entity.toDomain())
-                    }
+                val tasks = taskDao.getTasksWithFutureReminders(System.currentTimeMillis())
+                tasks.forEach { entity ->
+                    reminderScheduler.scheduleReminder(entity.toDomain())
                 }
             } finally {
                 pendingResult.finish()

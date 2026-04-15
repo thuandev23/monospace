@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskListDao {
-    @Query("SELECT * FROM lists WHERE sync_status != 'pending_delete'")
+    @Query("SELECT * FROM lists WHERE sync_status != 'pending_delete' ORDER BY sort_order ASC, created_at ASC")
     fun observeAllLists(): Flow<List<TaskListEntity>>
+
+    @Query("UPDATE lists SET sort_order = :order WHERE id = :id")
+    suspend fun updateSortOrder(id: String, order: Int)
 
     @Query("SELECT id FROM lists WHERE sync_status != 'pending_delete'")
     suspend fun getAllListIds(): List<String>

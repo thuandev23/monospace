@@ -1,7 +1,5 @@
 package com.monospace.app.core.data.repository
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.monospace.app.core.data.mapper.toDomain
 import com.monospace.app.core.data.mapper.toEntity
 import com.monospace.app.core.database.dao.TaskDao
@@ -15,26 +13,37 @@ class TaskRepositoryImpl @Inject constructor(
     private val taskDao: TaskDao
 ) : TaskRepository {
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun observeTasks(listId: String): Flow<List<Task>> {
         return taskDao.observeTasksByList(listId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun observeAllTasksSortedByDate(): Flow<List<Task>> {
         return taskDao.observeAllTasksSortedByDate().map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    override fun observeAllActiveTaskCount(): Flow<Int> =
+        taskDao.observeAllActiveTaskCount()
+
+    override fun observeTodayTaskCount(): Flow<Int> {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val dayStart = cal.timeInMillis
+        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        val dayEnd = cal.timeInMillis
+        return taskDao.observeTodayTaskCount(dayStart, dayEnd)
+    }
+
     override suspend fun getTaskById(taskId: String): Task? {
         return taskDao.getTaskById(taskId)?.toDomain()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun saveTask(task: Task) {
         taskDao.upsert(task.toEntity())
     }
@@ -48,7 +57,6 @@ class TaskRepositoryImpl @Inject constructor(
         taskDao.markAsDeleted(taskId)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun mergeRemoteTasks(remoteTasks: List<Task>) {
         for (remote in remoteTasks) {
             val local = taskDao.getTaskById(remote.id)

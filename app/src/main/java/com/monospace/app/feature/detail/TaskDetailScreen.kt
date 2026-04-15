@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
+import com.monospace.app.core.domain.model.ReminderUnit
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
@@ -160,14 +161,18 @@ private fun TaskDetailContent(
                     .atZone(ZoneId.systemDefault()).toInstant()
                 val endInstant = endD?.atTime(endT ?: LocalTime.MAX)
                     ?.atZone(ZoneId.systemDefault())?.toInstant()
-                onScheduleChange(
-                    startInstant,
-                    endInstant,
-                    startT == null,
-                    rem,
-                    rep
-                )
-            }
+                onScheduleChange(startInstant, endInstant, startT == null, rem, rep)
+                onShowDatePicker(false)
+            },
+            onNoDate = {
+                onScheduleChange(null, null, true, null, null)
+                onShowDatePicker(false)
+            },
+            initialStart = state.startDateTime,
+            initialEnd = state.endDateTime,
+            initialIsAllDay = state.isAllDay,
+            initialReminder = state.reminder,
+            initialRepeat = state.repeat
         )
     }
 
@@ -278,37 +283,23 @@ private fun TaskDetailContent(
             DetailRow(
                 icon = Icons.Default.AccessTime,
                 label = "Thời gian",
-                value = formatSchedule(state.startDateTime, state.isAllDay),
+                value = formatSchedule(state.startDateTime, state.endDateTime, state.isAllDay),
                 onClick = { onShowDatePicker(true) }
             )
 
             // Reminder row
-            state.reminder?.let { rem ->
-                DetailRow(
-                    icon = Icons.Default.Notifications,
-                    label = "Nhắc nhở",
-                    value = "${rem.value} ${rem.unit.name.lowercase()} trước",
-                    onClick = { onShowDatePicker(true) }
-                )
-            } ?: DetailRow(
+            DetailRow(
                 icon = Icons.Default.Notifications,
                 label = "Nhắc nhở",
-                value = "Không",
+                value = formatReminder(state.reminder),
                 onClick = { onShowDatePicker(true) }
             )
 
             // Repeat row
-            state.repeat?.let { rep ->
-                DetailRow(
-                    icon = Icons.Default.Repeat,
-                    label = "Lặp lại",
-                    value = formatRepeat(rep),
-                    onClick = { onShowDatePicker(true) }
-                )
-            } ?: DetailRow(
+            DetailRow(
                 icon = Icons.Default.Repeat,
                 label = "Lặp lại",
-                value = "Không",
+                value = formatRepeat(state.repeat),
                 onClick = { onShowDatePicker(true) }
             )
 
@@ -450,22 +441,64 @@ private fun priorityColor(priority: Priority) = when (priority) {
     Priority.NONE -> FocusTheme.colors.divider
 }
 
-private fun formatSchedule(instant: Instant?, isAllDay: Boolean): String {
-    if (instant == null) return "Không"
-    val zdt = instant.atZone(ZoneId.systemDefault())
-    return if (isAllDay) {
-        zdt.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+private fun formatSchedule(start: Instant?, end: Instant?, isAllDay: Boolean): String {
+    if (start == null) return "Không"
+    val zone = ZoneId.systemDefault()
+    val startZdt = start.atZone(zone)
+    val formatter = if (isAllDay) {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     } else {
-        zdt.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT))
+        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
     }
+    
+    val startStr = startZdt.format(formatter)
+    if (end == null) return startStr
+    
+    val endZdt = end.atZone(zone)
+    val endStr = endZdt.format(formatter)
+    
+    return "$startStr - $endStr"
 }
 
-private fun formatRepeat(rep: RepeatConfig): String {
+private fun formatReminder(reminder: ReminderConfig?): String {
+    if (reminder == null) return "Không"
+    if (reminder.value == 0) return "Vào lúc bắt đầu"
+    
+    val unitStr = when (reminder.unit) {
+        ReminderUnit.MINUTE -> "phút"
+        ReminderUnit.HOUR -> "giờ"
+        ReminderUnit.DAY -> "ngày"
+        ReminderUnit.WEEK -> "tuần"
+        ReminderUnit.MONTH -> "tháng"
+    }
+    val relation = if (reminder.isBefore) "trước" else "sau"
+    return "${reminder.value} $unitStr $relation"
+}
+
+private fun formatRepeat(rep: RepeatConfig?): String {
+    if (rep == null) return "Không"
     val unitLabel = when (rep.unit) {
         RepeatUnit.DAY -> if (rep.interval == 1) "ngày" else "${rep.interval} ngày"
         RepeatUnit.WEEK -> if (rep.interval == 1) "tuần" else "${rep.interval} tuần"
         RepeatUnit.MONTH -> if (rep.interval == 1) "tháng" else "${rep.interval} tháng"
         RepeatUnit.YEAR -> if (rep.interval == 1) "năm" else "${rep.interval} năm"
     }
-    return "Mỗi $unitLabel"
+    
+    var result = "Mỗi $unitLabel"
+    if (rep.unit == RepeatUnit.WEEK && !rep.daysOfWeek.isNullOrEmpty()) {
+        val days = rep.daysOfWeek.sorted().joinToString(", ") { dayIdx ->
+            when (dayIdx) {
+                1 -> "Thứ 2"
+                2 -> "Thứ 3"
+                3 -> "Thứ 4"
+                4 -> "Thứ 5"
+                5 -> "Thứ 6"
+                6 -> "Thứ 7"
+                7 -> "Chủ nhật"
+                else -> ""
+            }
+        }
+        result += " ($days)"
+    }
+    return result
 }

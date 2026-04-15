@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+/image_synctasks_app/
+Plan.md
+ROADMAP.md

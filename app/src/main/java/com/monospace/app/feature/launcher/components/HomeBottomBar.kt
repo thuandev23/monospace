@@ -35,7 +35,9 @@ fun HomeBottomBar(
     onTodayClick: () -> Unit,
     onUpcomingClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    showUpcoming: Boolean = true,
+    showSearch: Boolean = true
 ) {
     Surface(
         color = FocusTheme.colors.surface,
@@ -72,23 +74,27 @@ fun HomeBottomBar(
             }
 
             // Tab 2: Upcoming (Calendar icon)
-            IconButton(onClick = onUpcomingClick) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = "Upcoming",
-                    tint = FocusTheme.colors.secondary,
-                    modifier = Modifier.size(26.dp)
-                )
+            if (showUpcoming) {
+                IconButton(onClick = onUpcomingClick) {
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = "Upcoming",
+                        tint = FocusTheme.colors.secondary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
 
             // Tab 3: Search
-            IconButton(onClick = onSearchClick) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = FocusTheme.colors.secondary,
-                    modifier = Modifier.size(26.dp)
-                )
+            if (showSearch) {
+                IconButton(onClick = onSearchClick) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = FocusTheme.colors.secondary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
 
             // Tab 4: Settings

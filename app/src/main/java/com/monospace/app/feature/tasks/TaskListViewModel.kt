@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.TaskListRepository
+import com.monospace.app.core.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -19,27 +21,45 @@ import javax.inject.Inject
 
 data class TaskListUiState(
     val lists: List<TaskList> = emptyList(),
+    val allTaskCount: Int = 0,
+    val todayTaskCount: Int = 0,
+    val isEditMode: Boolean = false,
     val showCreateDialog: Boolean = false,
-    val editingList: TaskList? = null   // null = không đang edit
+    val editingList: TaskList? = null
 )
 
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
-    private val repository: TaskListRepository
+    private val repository: TaskListRepository,
+    private val taskRepository: TaskRepository
 ) : ViewModel() {
 
     private val _showCreateDialog = MutableStateFlow(false)
     private val _editingList = MutableStateFlow<TaskList?>(null)
+    private val _isEditMode = MutableStateFlow(false)
+
     private val _errorEvent = MutableSharedFlow<String>()
     val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
 
-    val uiState = combine(
+    private val _baseListState = combine(
         repository.observeAllLists(),
+        taskRepository.observeAllActiveTaskCount(),
+        taskRepository.observeTodayTaskCount()
+    ) { lists, allCount, todayCount ->
+        Triple(lists, allCount, todayCount)
+    }
+
+    val uiState: StateFlow<TaskListUiState> = combine(
+        _baseListState,
+        _isEditMode,
         _showCreateDialog,
         _editingList
-    ) { lists, showDialog, editing ->
+    ) { (lists, allCount, todayCount), editMode, showDialog, editing ->
         TaskListUiState(
             lists = lists,
+            allTaskCount = allCount,
+            todayTaskCount = todayCount,
+            isEditMode = editMode,
             showCreateDialog = showDialog,
             editingList = editing
         )
@@ -48,6 +68,9 @@ class TaskListViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = TaskListUiState()
     )
+
+    fun enterEditMode() { _isEditMode.value = true }
+    fun exitEditMode() { _isEditMode.value = false }
 
     fun showCreateDialog() { _showCreateDialog.value = true }
     fun hideCreateDialog() { _showCreateDialog.value = false }
@@ -59,11 +82,14 @@ class TaskListViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
+                val lists = uiState.value.lists
+                val maxOrder = lists.maxOfOrNull { it.sortOrder } ?: 0
                 repository.saveList(
                     TaskList(
                         id = UUID.randomUUID().toString(),
                         name = name.trim(),
-                        syncStatus = SyncStatus.PENDING_CREATE
+                        syncStatus = SyncStatus.PENDING_CREATE,
+                        sortOrder = maxOrder + 1
                     )
                 )
                 hideCreateDialog()
@@ -91,6 +117,36 @@ class TaskListViewModel @Inject constructor(
                 repository.deleteList(id)
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể xóa danh sách: ${e.message}")
+            }
+        }
+    }
+
+    fun moveListUp(list: TaskList) {
+        viewModelScope.launch {
+            try {
+                val lists = uiState.value.lists.filter { it.id != "default" }
+                val idx = lists.indexOfFirst { it.id == list.id }
+                if (idx <= 0) return@launch
+                val prev = lists[idx - 1]
+                repository.updateSortOrder(list.id, prev.sortOrder)
+                repository.updateSortOrder(prev.id, list.sortOrder)
+            } catch (e: Exception) {
+                _errorEvent.emit("Lỗi sắp xếp: ${e.message}")
+            }
+        }
+    }
+
+    fun moveListDown(list: TaskList) {
+        viewModelScope.launch {
+            try {
+                val lists = uiState.value.lists.filter { it.id != "default" }
+                val idx = lists.indexOfFirst { it.id == list.id }
+                if (idx < 0 || idx >= lists.size - 1) return@launch
+                val next = lists[idx + 1]
+                repository.updateSortOrder(list.id, next.sortOrder)
+                repository.updateSortOrder(next.id, list.sortOrder)
+            } catch (e: Exception) {
+                _errorEvent.emit("Lỗi sắp xếp: ${e.message}")
             }
         }
     }

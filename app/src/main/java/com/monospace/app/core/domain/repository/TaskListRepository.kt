@@ -7,4 +7,5 @@ interface TaskListRepository {
     fun observeAllLists(): Flow<List<TaskList>>
     suspend fun saveList(list: TaskList)
     suspend fun deleteList(id: String)
+    suspend fun updateSortOrder(id: String, order: Int)
 }

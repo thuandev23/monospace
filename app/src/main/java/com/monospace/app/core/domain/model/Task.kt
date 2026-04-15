@@ -27,10 +27,11 @@ data class Task(
 data class ReminderConfig(
     val value: Int,
     val unit: ReminderUnit,
-    val remindTime: LocalTime
+    val remindTime: LocalTime,
+    val isBefore: Boolean = true
 )
 
-enum class ReminderUnit { MINUTE, HOUR, DAY, WEEK }
+enum class ReminderUnit { MINUTE, HOUR, DAY, WEEK, MONTH }
 
 data class RepeatConfig(
     val interval: Int,
@@ -39,6 +40,7 @@ data class RepeatConfig(
 )
 
 enum class RepeatUnit { DAY, WEEK, MONTH, YEAR }
+
 
 enum class Priority(val value: Int) {
     NONE(0), LOW(1), MEDIUM(2), HIGH(3)

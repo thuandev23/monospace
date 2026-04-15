@@ -11,6 +11,7 @@ data class TaskListEntity(
     val name: String,
     @ColumnInfo(name = "external_id") val externalId: String? = null,
     @ColumnInfo(name = "sync_status") val syncStatus: String = "synced",
+    @ColumnInfo(name = "sort_order") val sortOrder: Int = 0,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis()
 )

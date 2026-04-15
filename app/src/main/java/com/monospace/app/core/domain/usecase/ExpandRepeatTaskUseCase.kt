@@ -1,7 +1,5 @@
 package com.monospace.app.core.domain.usecase
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
@@ -25,7 +23,6 @@ class ExpandRepeatTaskUseCase @Inject constructor(
      * Khi một task có RepeatConfig được đánh dấu hoàn thành,
      * tạo instance tiếp theo với thời gian được tính theo lịch lặp.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     suspend operator fun invoke(completedTask: Task) {
         val repeat = completedTask.repeat ?: return
         val startDateTime = completedTask.startDateTime ?: return

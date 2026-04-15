@@ -1,7 +1,5 @@
 package com.monospace.app.core.data.mapper
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.monospace.app.core.database.entity.TaskEntity
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
@@ -15,7 +13,6 @@ import java.time.Instant
 import java.time.LocalTime
 
 // Chuyển từ Room Entity sang Domain Model
-@RequiresApi(Build.VERSION_CODES.O)
 fun TaskEntity.toDomain(): Task {
     return Task(
         id = this.id,
@@ -52,7 +49,6 @@ fun TaskEntity.toDomain(): Task {
 }
 
 // Chuyển từ Domain Model sang Room Entity
-@RequiresApi(Build.VERSION_CODES.O)
 fun Task.toEntity(): TaskEntity {
     return TaskEntity(
         id = this.id,

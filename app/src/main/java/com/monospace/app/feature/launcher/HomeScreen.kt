@@ -61,8 +61,10 @@ import com.monospace.app.feature.launcher.components.HomeTopBar
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
 import com.monospace.app.feature.launcher.components.MoveToFolderSheet
 import com.monospace.app.feature.launcher.components.RescheduleSheet
+import com.monospace.app.feature.launcher.components.FocusSessionSheet
 import com.monospace.app.feature.launcher.components.SelectionActionBar
 import com.monospace.app.feature.launcher.components.TaskList
+import com.monospace.app.feature.focus.FocusViewModel
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
 import com.monospace.app.ui.theme.FocusTheme
@@ -76,9 +78,11 @@ fun HomeScreen(
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    focusViewModel: FocusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val timerState by focusViewModel.timerState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -111,7 +115,12 @@ fun HomeScreen(
         onRescheduleSelected = viewModel::rescheduleSelectedTasks,
         onNavigateToTask = onNavigateToTask,
         onNavigateToLists = onNavigateToLists,
-        initialShowSearch = initialShowSearch
+        initialShowSearch = initialShowSearch,
+        focusTimerState = timerState,
+        onSetFocusMode = focusViewModel::setFocusMode,
+        onAdjustFocusDuration = focusViewModel::adjustDuration,
+        onStartFocus = focusViewModel::startFocus,
+        onStopFocus = focusViewModel::stopFocus
     )
 }
 
@@ -140,7 +149,12 @@ fun HomeScreenContent(
     onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
-    initialShowSearch: Boolean = false
+    initialShowSearch: Boolean = false,
+    focusTimerState: com.monospace.app.feature.focus.FocusTimerState = com.monospace.app.feature.focus.FocusTimerState(),
+    onSetFocusMode: (com.monospace.app.feature.focus.FocusMode) -> Unit = {},
+    onAdjustFocusDuration: (Int) -> Unit = {},
+    onStartFocus: () -> Unit = {},
+    onStopFocus: () -> Unit = {}
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -214,7 +228,12 @@ fun HomeScreenContent(
                         onRescheduleSelected = onRescheduleSelected,
                         onNavigateToTask = onNavigateToTask,
                         onNavigateToLists = onNavigateToLists,
-                        initialShowSearch = initialShowSearch
+                        initialShowSearch = initialShowSearch,
+                        focusTimerState = focusTimerState,
+                        onSetFocusMode = onSetFocusMode,
+                        onAdjustFocusDuration = onAdjustFocusDuration,
+                        onStartFocus = onStartFocus,
+                        onStopFocus = onStopFocus
                     )
 
                     if (uiState.showCreateSheet) {
@@ -224,7 +243,9 @@ fun HomeScreenContent(
                             onTodayClick = { onShowDatePicker(true) },
                             availableLists = uiState.availableLists,
                             currentListId = uiState.draftListId,
-                            onListSelected = onUpdateDraftListId
+                            onListSelected = onUpdateDraftListId,
+                            draftStartDate = uiState.draftStartDateTime,
+                            draftIsAllDay = uiState.draftIsAllDay
                         )
                     }
 
@@ -236,15 +257,17 @@ fun HomeScreenContent(
                                     .atZone(ZoneId.systemDefault()).toInstant()
                                 val endInstant = endD?.atTime(endT ?: LocalTime.MAX)
                                     ?.atZone(ZoneId.systemDefault())?.toInstant()
-                                
-                                onUpdateDraftSchedule(
-                                    startInstant,
-                                    endInstant,
-                                    startT == null,
-                                    rem,
-                                    rep
-                                )
-                            }
+                                onUpdateDraftSchedule(startInstant, endInstant, startT == null, rem, rep)
+                                onShowDatePicker(false)
+                            },
+                            onNoDate = {
+                                onUpdateDraftSchedule(null, null, true, null, null)
+                            },
+                            initialStart = uiState.draftStartDateTime,
+                            initialEnd = uiState.draftEndDateTime,
+                            initialIsAllDay = uiState.draftIsAllDay,
+                            initialReminder = uiState.draftReminder,
+                            initialRepeat = uiState.draftRepeat
                         )
                     }
                 }
@@ -306,11 +329,17 @@ private fun SuccessContent(
     onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
-    initialShowSearch: Boolean = false
+    initialShowSearch: Boolean = false,
+    focusTimerState: com.monospace.app.feature.focus.FocusTimerState = com.monospace.app.feature.focus.FocusTimerState(),
+    onSetFocusMode: (com.monospace.app.feature.focus.FocusMode) -> Unit = {},
+    onAdjustFocusDuration: (Int) -> Unit = {},
+    onStartFocus: () -> Unit = {},
+    onStopFocus: () -> Unit = {}
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { it.status != TaskStatus.DONE } }
     val completedTasks = remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
+    var showFocusSheet by remember { mutableStateOf(false) }
 
     // Selection action dialog states
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -344,6 +373,7 @@ private fun SuccessContent(
                     onMenuToggle(false)
                     onNavigateToLists()
                 },
+                onFocusClick = { showFocusSheet = true },
                 viewSettings = state.viewSettings,
                 onViewSettingsChange = onViewSettingsChange
             )
@@ -462,6 +492,17 @@ private fun SuccessContent(
             lists = (state as? HomeUiState.Success)?.availableLists ?: emptyList<TaskList>(),
             onSelect = { listId -> onMoveSelectedToList(listId); showMoveToFolderSheet = false },
             onDismiss = { showMoveToFolderSheet = false }
+        )
+    }
+
+    if (showFocusSheet) {
+        FocusSessionSheet(
+            timerState = focusTimerState,
+            onDismiss = { showFocusSheet = false },
+            onSetMode = onSetFocusMode,
+            onAdjustDuration = onAdjustFocusDuration,
+            onStartFocus = onStartFocus,
+            onStopFocus = onStopFocus
         )
     }
 }

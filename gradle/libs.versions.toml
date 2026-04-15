@@ -26,6 +26,7 @@ ui = "1.10.6"
 places = "5.1.1"
 navigation = "2.8.5"
 kotlinx-metadata = "0.9.0"
+billing = "7.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -85,6 +86,9 @@ firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashly
 leakcanary-android = { group = "com.squareup.leakcanary", name = "leakcanary-android", version.ref = "leakcanary" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
+
+# Google Play Billing
+billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 # Kotlin Metadata
 kotlinx-metadata-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-metadata-jvm", version.ref = "kotlinx-metadata" }

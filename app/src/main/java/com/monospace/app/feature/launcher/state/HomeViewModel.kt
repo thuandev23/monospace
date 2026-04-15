@@ -104,46 +104,76 @@ class HomeViewModel @Inject constructor(
     private val _viewSettings = settingsDataStore.viewSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, ViewSettings())
 
+    // Intermediate data classes to avoid type-unsafe 14-arg combine
+    private data class TaskListState(
+        val tasks: List<Task>,
+        val availableLists: List<TaskList>,
+        val isSelectionMode: Boolean,
+        val selectedTaskIds: Set<String>,
+        val searchQuery: String
+    )
+
+    private data class UiSheetState(
+        val isMenuExpanded: Boolean,
+        val showCreateSheet: Boolean,
+        val showDatePicker: Boolean
+    )
+
+    private data class DraftState(
+        val listId: String,
+        val startDateTime: Instant?,
+        val endDateTime: Instant?,
+        val isAllDay: Boolean,
+        val reminder: ReminderConfig?,
+        val repeat: RepeatConfig?
+    )
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val _baseState = combine(
+    private val _taskListState = combine(
         _currentListId.flatMapLatest { id -> getTasksUseCase(id) },
         taskListRepository.observeAllLists(),
         _isSelectionMode,
         _selectedTaskIds,
-        _searchQuery,
-        _isMenuExpanded,
-        _showCreateSheet,
-        _showDatePicker,
-        _draftListId,
-        _draftStartDateTime,
-        _draftEndDateTime,
-        _draftIsAllDay,
-        _draftReminder,
-        _draftRepeat
-    ) { args ->
-        @Suppress("UNCHECKED_CAST")
-        val allTasks = args[0] as List<Task>
-        val query = args[4] as String
-        val searchFiltered = if (query.isBlank()) allTasks
-        else allTasks.filter { task ->
-            task.title.contains(query, ignoreCase = true) ||
-                task.notes?.contains(query, ignoreCase = true) == true
-        }
+        _searchQuery
+    ) { allTasks, lists, selection, selectedIds, query ->
+        val filtered = if (query.isBlank()) allTasks
+            else allTasks.filter { it.title.contains(query, true) || it.notes?.contains(query, true) == true }
+        TaskListState(filtered, lists, selection, selectedIds, query)
+    }
+
+    private val _sheetState = combine(
+        _isMenuExpanded, _showCreateSheet, _showDatePicker
+    ) { menu, create, date -> UiSheetState(menu, create, date) }
+
+    // 6 flows → split into 2 nested combines (max 5 args each)
+    private val _draftDateTime = combine(
+        _draftStartDateTime, _draftEndDateTime, _draftIsAllDay
+    ) { start, end, allDay -> Triple(start, end, allDay) }
+
+    private val _draftState = combine(
+        _draftListId, _draftDateTime, _draftReminder, _draftRepeat
+    ) { listId, dt, reminder, repeat ->
+        DraftState(listId, dt.first, dt.second, dt.third, reminder, repeat)
+    }
+
+    private val _baseState = combine(
+        _taskListState, _sheetState, _draftState
+    ) { tl, sheet, draft ->
         HomeUiState.Success(
-            tasks = searchFiltered,
-            availableLists = args[1] as List<TaskList>,
-            isSelectionMode = args[2] as Boolean,
-            selectedTaskIds = args[3] as Set<String>,
-            searchQuery = query,
-            isMenuExpanded = args[5] as Boolean,
-            showCreateSheet = args[6] as Boolean,
-            showDatePicker = args[7] as Boolean,
-            draftListId = args[8] as String,
-            draftStartDateTime = args[9] as Instant?,
-            draftEndDateTime = args[10] as Instant?,
-            draftIsAllDay = args[11] as Boolean,
-            draftReminder = args[12] as ReminderConfig?,
-            draftRepeat = args[13] as RepeatConfig?
+            tasks = tl.tasks,
+            availableLists = tl.availableLists,
+            isSelectionMode = tl.isSelectionMode,
+            selectedTaskIds = tl.selectedTaskIds,
+            searchQuery = tl.searchQuery,
+            isMenuExpanded = sheet.isMenuExpanded,
+            showCreateSheet = sheet.showCreateSheet,
+            showDatePicker = sheet.showDatePicker,
+            draftListId = draft.listId,
+            draftStartDateTime = draft.startDateTime,
+            draftEndDateTime = draft.endDateTime,
+            draftIsAllDay = draft.isAllDay,
+            draftReminder = draft.reminder,
+            draftRepeat = draft.repeat
         )
     }
 
