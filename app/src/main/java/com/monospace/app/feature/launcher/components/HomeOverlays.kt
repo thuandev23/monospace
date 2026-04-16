@@ -338,58 +338,55 @@ fun MinimalCalendarDialog(
         containerColor = FocusTheme.colors.surfaceAlt,
         dragHandle = null,
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(FocusTheme.colors.surfaceAlt)
+                .navigationBarsPadding()
+        ) {
+            // Header
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.9f)
-                    .background(FocusTheme.colors.surfaceAlt)
-                    .navigationBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(
-                            stringResource(R.string.action_cancel),
-                            color = FocusTheme.colors.primary
-                        )
-                    }
+                TextButton(onClick = onDismiss) {
                     Text(
-                        stringResource(R.string.label_date),
-                        style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold)
+                        stringResource(R.string.action_cancel),
+                        color = FocusTheme.colors.primary
                     )
-                    TextButton(onClick = {
-                        onConfigSave(
-                            startDate,
-                            if (isTimeEnabled) startTime else null,
-                            if (isDurationEnabled) endDate else null,
-                            if (isDurationEnabled && isTimeEnabled) endTime else null,
-                            reminderConfig,
-                            repeatConfig
-                        )
-                        onDismiss()
-                    }) {
-                        Text(
-                            stringResource(R.string.action_done),
-                            color = FocusTheme.colors.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
+                Text(
+                    stringResource(R.string.label_date),
+                    style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold)
+                )
+                TextButton(onClick = {
+                    onConfigSave(
+                        startDate,
+                        if (isTimeEnabled) startTime else null,
+                        if (isDurationEnabled) endDate else null,
+                        if (isDurationEnabled && isTimeEnabled) endTime else null,
+                        reminderConfig,
+                        repeatConfig
+                    )
+                    onDismiss()
+                }) {
+                    Text(
+                        stringResource(R.string.action_done),
+                        color = FocusTheme.colors.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                     // Quick options
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -508,49 +505,48 @@ fun MinimalCalendarDialog(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        // Sub-Menus (Dialog/ModalBottomSheet composables are independent overlays)
+        if (showReminderMenu) {
+            ReminderSelectionDialog(
+                onReminderSelected = {
+                    reminderConfig = it
+                    showReminderMenu = false
+                },
+                onCustomClick = { showReminderMenu = false; showCustomReminder = true },
+                onDismiss = { showReminderMenu = false }
+            )
+        }
+
+        if (showCustomReminder) {
+            CustomReminderBottomSheet(
+                onDismiss = { showCustomReminder = false },
+                onDone = { config ->
+                    reminderConfig = config
+                    showCustomReminder = false
                 }
-            }
+            )
+        }
 
-            // Sub-Menus
-            if (showReminderMenu) {
-                ReminderSelectionDialog(
-                    onReminderSelected = {
-                        reminderConfig = it
-                        showReminderMenu = false
-                    },
-                    onCustomClick = { showReminderMenu = false; showCustomReminder = true },
-                    onDismiss = { showReminderMenu = false }
-                )
-            }
+        if (showRepeatMenu) {
+            RepeatSelectionDialog(
+                onRepeatSelected = { repeatConfig = it; showRepeatMenu = false },
+                onCustomClick = { showRepeatMenu = false; showCustomRepeat = true },
+                onDismiss = { showRepeatMenu = false }
+            )
+        }
 
-            if (showCustomReminder) {
-                CustomReminderBottomSheet(
-                    onDismiss = { showCustomReminder = false },
-                    onDone = { config ->
-                        reminderConfig = config
-                        showCustomReminder = false
-                    }
-                )
-            }
-
-            if (showRepeatMenu) {
-                RepeatSelectionDialog(
-                    onRepeatSelected = { repeatConfig = it; showRepeatMenu = false },
-                    onCustomClick = { showRepeatMenu = false; showCustomRepeat = true },
-                    onDismiss = { showRepeatMenu = false }
-                )
-            }
-
-            if (showCustomRepeat) {
-                CustomRepeatBottomSheet(
-                    onDismiss = { showCustomRepeat = false },
-                    onDone = { config ->
-                        repeatConfig = config
-                        showCustomRepeat = false
-                    }
-                )
-            }
+        if (showCustomRepeat) {
+            CustomRepeatBottomSheet(
+                onDismiss = { showCustomRepeat = false },
+                onDone = { config ->
+                    repeatConfig = config
+                    showCustomRepeat = false
+                }
+            )
         }
     }
 
@@ -702,10 +698,9 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
         sheetState = sheetState,
         containerColor = FocusTheme.colors.surfaceAlt,
         dragHandle = null,
-        modifier = Modifier.fillMaxHeight(0.9f)
     ) {
         Column(modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .navigationBarsPadding()) {
             Row(
                 modifier = Modifier
@@ -831,10 +826,9 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
         sheetState = sheetState,
         containerColor = FocusTheme.colors.surfaceAlt,
         dragHandle = null,
-        modifier = Modifier.fillMaxHeight(0.9f)
     ) {
         Column(modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())) {
             Row(
@@ -1072,7 +1066,6 @@ fun ViewOptionsBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.9f)
                 .background(FocusTheme.colors.surfaceAlt)
                 .navigationBarsPadding()
         ) {
@@ -1102,7 +1095,6 @@ fun ViewOptionsBottomSheet(
 
             Column(
                 modifier = Modifier
-                    .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
