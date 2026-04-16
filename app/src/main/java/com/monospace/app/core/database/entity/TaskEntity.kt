@@ -29,7 +29,7 @@ data class TaskEntity(
     @ColumnInfo(name = "external_source") val externalSource: String? = null,
     val title: String,
     val notes: String? = null,
-    @ColumnInfo(name = "task_status") val taskStatus: String = "NOT_DONE",
+    @ColumnInfo(name = "task_status", defaultValue = "NOT_DONE") val taskStatus: String = "NOT_DONE",
     val priority: Int = 0,
     @ColumnInfo(name = "parent_task_id") val parentTaskId: String? = null,
     @ColumnInfo(name = "list_id") val listId: String,

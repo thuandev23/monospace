@@ -2,6 +2,7 @@ package com.monospace.app.core.billing
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -29,6 +30,7 @@ class BillingManager @Inject constructor(
 ) : PurchasesUpdatedListener {
 
     companion object {
+        private const val TAG = "BillingManager"
         const val PRO_PRODUCT_ID = "monospace_pro_monthly"
         const val PRO_ANNUAL_PRODUCT_ID = "monospace_pro_annual"
     }
@@ -52,14 +54,17 @@ class BillingManager @Inject constructor(
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    Log.d(TAG, "Billing setup successful")
                     queryPurchases()
                     queryProducts()
                 } else {
+                    Log.e(TAG, "Billing setup failed: ${result.debugMessage} (Code: ${result.responseCode})")
                     _billingState.value = BillingState.ERROR
                 }
             }
 
             override fun onBillingServiceDisconnected() {
+                Log.w(TAG, "Billing service disconnected")
                 _billingState.value = BillingState.ERROR
             }
         })
@@ -78,6 +83,7 @@ class BillingManager @Inject constructor(
                 }
                 _billingState.value = if (hasActiveSub) BillingState.SUBSCRIBED else BillingState.NOT_SUBSCRIBED
             } else {
+                Log.e(TAG, "Query purchases failed: ${result.debugMessage}")
                 _billingState.value = BillingState.NOT_SUBSCRIBED
             }
         }
@@ -90,15 +96,25 @@ class BillingManager @Inject constructor(
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
         }
-        billingClient.queryProductDetailsAsync(
-            QueryProductDetailsParams.newBuilder().setProductList(productList).build()
-        ) { _, details ->
-            _productDetails.value = details
+        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
+        
+        billingClient.queryProductDetailsAsync(params) { result, details ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                Log.d(TAG, "Products queried: ${details.size}")
+                _productDetails.value = details
+            } else {
+                Log.e(TAG, "Query products failed: ${result.debugMessage} (Code: ${result.responseCode})")
+            }
         }
     }
 
     fun launchBillingFlow(activity: Activity, productDetails: ProductDetails) {
-        val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+        if (offerToken == null) {
+            Log.e(TAG, "No offer token found for product: ${productDetails.productId}")
+            return
+        }
+
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(
@@ -113,13 +129,21 @@ class BillingManager @Inject constructor(
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: List<Purchase>?) {
-        if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            for (purchase in purchases) {
-                if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged) {
-                    acknowledgePurchase(purchase)
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                purchases?.forEach { purchase ->
+                    if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged) {
+                        acknowledgePurchase(purchase)
+                    }
                 }
+                _billingState.value = BillingState.SUBSCRIBED
             }
-            _billingState.value = BillingState.SUBSCRIBED
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                Log.i(TAG, "User canceled the purchase")
+            }
+            else -> {
+                Log.e(TAG, "Purchase failed: ${result.debugMessage} (Code: ${result.responseCode})")
+            }
         }
     }
 
@@ -128,6 +152,10 @@ class BillingManager @Inject constructor(
             AcknowledgePurchaseParams.newBuilder()
                 .setPurchaseToken(purchase.purchaseToken)
                 .build()
-        ) { /* acknowledgment result */ }
+        ) { result ->
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                Log.e(TAG, "Acknowledge purchase failed: ${result.debugMessage}")
+            }
+        }
     }
 }

@@ -71,6 +71,10 @@
 -keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**
 
+# ─── Google Play Billing ──────────────────────────────────────────────────────
+-keep class com.android.billingclient.api.** { *; }
+-dontwarn com.android.billingclient.api.**
+
 # ─── App-specific: enums (used in Room TypeConverters) ────────────────────────
 -keepclassmembers enum com.monospace.app.** {
     public static **[] values();

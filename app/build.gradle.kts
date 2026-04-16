@@ -116,10 +116,7 @@ dependencies {
 
     // Google Play Billing
     implementation(libs.billing)
-
-    // Debug
-    debugImplementation(libs.leakcanary.android)
-
+    
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
