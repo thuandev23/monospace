@@ -94,12 +94,13 @@ fun MainScreen() {
                         showUpcoming = tabBarSettings.showUpcoming,
                         showSearch = tabBarSettings.showSearch,
                         onTodayClick = {
+                            // Today luôn về default list — không restore state từ folder cũ
                             navController.navigate(Screen.Home.BASE) {
                                 popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                                    inclusive = true
+                                    saveState = false
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                                launchSingleTop = false
                             }
                         },
                         onSearchClick = {

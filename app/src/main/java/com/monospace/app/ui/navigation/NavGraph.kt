@@ -109,7 +109,8 @@ fun MonospaceNavGraph(
                     }
                 },
                 onTodayClick = {
-                    navController.navigate(Screen.Home.BASE) {
+                    // "today" listId → GetTasksUseCase trả tasks hôm nay từ tất cả lists
+                    navController.navigate(Screen.Home.withList("today")) {
                         launchSingleTop = true
                     }
                 },

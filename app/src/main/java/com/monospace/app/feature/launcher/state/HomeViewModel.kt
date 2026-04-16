@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -76,9 +78,12 @@ class HomeViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
-    // One-shot error events → hiển thị Snackbar ở UI
+    // One-shot events → hiển thị Snackbar ở UI
     private val _errorEvent = MutableSharedFlow<String>()
     val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
+
+    private val _successEvent = MutableSharedFlow<String>()
+    val successEvent: SharedFlow<String> = _successEvent.asSharedFlow()
 
     private val _currentListId = MutableStateFlow(
         savedStateHandle.get<String>("listId") ?: "default"
@@ -92,8 +97,12 @@ class HomeViewModel @Inject constructor(
     private val _showCreateSheet = MutableStateFlow(false)
     private val _showDatePicker = MutableStateFlow(false)
 
-    // Draft State
-    private val _draftListId = MutableStateFlow("default")
+    // Draft State — mặc định theo list đang xem (virtual listId → về default)
+    private val _draftListId = MutableStateFlow(
+        savedStateHandle.get<String>("listId")
+            ?.takeIf { it != "all" && it != "today" }
+            ?: "default"
+    )
     private val _draftStartDateTime = MutableStateFlow<Instant?>(null)
     private val _draftEndDateTime = MutableStateFlow<Instant?>(null)
     private val _draftIsAllDay = MutableStateFlow(true)
@@ -229,7 +238,8 @@ class HomeViewModel @Inject constructor(
                     listId = _draftListId.value,
                     syncStatus = SyncStatus.PENDING_CREATE,
                     priority = Priority.NONE,
-                    startDateTime = _draftStartDateTime.value,
+                    startDateTime = _draftStartDateTime.value
+                    ?: LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant(),
                     endDateTime = _draftEndDateTime.value,
                     isAllDay = _draftIsAllDay.value,
                     reminder = _draftReminder.value,
@@ -238,6 +248,7 @@ class HomeViewModel @Inject constructor(
                 addTaskUseCase(task)
                 resetDraft()
                 setShowCreateSheet(false)
+                _successEvent.emit("Task đã được tạo")
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể thêm task: ${e.message}")
             }
@@ -245,7 +256,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun resetDraft() {
-        _draftListId.value = "default"
+        // Reset về list hiện tại đang xem (virtual listId → về default)
+        val currentList = _currentListId.value
+        _draftListId.value = if (currentList == "all" || currentList == "today") "default" else currentList
         _draftStartDateTime.value = null
         _draftEndDateTime.value = null
         _draftIsAllDay.value = true

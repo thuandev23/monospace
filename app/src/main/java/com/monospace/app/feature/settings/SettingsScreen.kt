@@ -70,7 +70,6 @@ import androidx.compose.ui.unit.sp
 import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 import java.util.Calendar
-import java.util.UUID
 
 // ─── SettingItem: onClick nullable → không hiện arrow nếu null ───────────────
 
@@ -104,6 +103,7 @@ fun SettingsScreen(
 
     val savedOrder by viewModel.sidebarItemOrder.collectAsState()
     val savedHidden by viewModel.sidebarHiddenItems.collectAsState()
+    val dbFolders by viewModel.folders.collectAsState()
 
     // Main Section Items
     var mainItems by remember {
@@ -152,26 +152,23 @@ fun SettingsScreen(
         )
     }
 
-    // Folders
-    var folderItems by remember {
-        mutableStateOf(
-            listOf(
-                EditableListItem(
-                    "inbox",
-                    "Inbox",
-                    {
-                        Icon(
-                            Icons.Default.Inbox,
-                            null,
-                            tint = FocusTheme.colors.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    hasCheckbox = false
+    // Folders — derived from DB; editFolderItems dùng cho reorder trong edit mode
+    val folderItems = dbFolders.map { list ->
+        EditableListItem(
+            id = list.id,
+            title = list.name,
+            icon = {
+                Icon(
+                    Icons.Default.Inbox,
+                    null,
+                    tint = FocusTheme.colors.primary,
+                    modifier = Modifier.size(24.dp)
                 )
-            )
+            },
+            hasCheckbox = false
         )
     }
+    var editFolderItems by remember(folderItems) { mutableStateOf(folderItems) }
 
     // Reminders
     var reminderItems by remember {
@@ -224,12 +221,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     if (newFolderName.isNotBlank()) {
-                        folderItems = folderItems + EditableListItem(
-                            id = UUID.randomUUID().toString(),
-                            title = newFolderName,
-                            icon = { Icon(Icons.Default.Inbox, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                            hasCheckbox = false
-                        )
+                        viewModel.createFolder(newFolderName)
                         newFolderName = ""
                         showAddFolderDialog = false
                     }
@@ -482,7 +474,7 @@ fun SettingsScreen(
             ) {
                 Column {
                     val itemsToRender =
-                        if (isEditMode) folderItems else folderItems.filter { it.isVisible }
+                        if (isEditMode) editFolderItems else folderItems.filter { it.isVisible }
                     itemsToRender.forEachIndexed { index, item ->
                         if (isEditMode) {
                             var accumulatedDrag by remember { mutableStateOf(0f) }
@@ -491,16 +483,16 @@ fun SettingsScreen(
                             EditListItemRow(
                                 item = item,
                                 onToggleVisibility = {
-                                    folderItems =
-                                        folderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                    editFolderItems =
+                                        editFolderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
                                 },
                                 onDrag = { deltaY ->
                                     accumulatedDrag += deltaY
-                                    if (accumulatedDrag > threshold && index < folderItems.size - 1) {
-                                        folderItems = folderItems.move(index, index + 1)
+                                    if (accumulatedDrag > threshold && index < editFolderItems.size - 1) {
+                                        editFolderItems = editFolderItems.move(index, index + 1)
                                         accumulatedDrag = 0f
                                     } else if (accumulatedDrag < -threshold && index > 0) {
-                                        folderItems = folderItems.move(index, index - 1)
+                                        editFolderItems = editFolderItems.move(index, index - 1)
                                         accumulatedDrag = 0f
                                     }
                                 },

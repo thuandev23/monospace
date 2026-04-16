@@ -10,6 +10,10 @@ class GetTasksUseCase @Inject constructor(
     private val repository: TaskRepository
 ) {
     operator fun invoke(listId: String): Flow<List<Task>> {
-        return repository.observeTasks(listId)
+        return when (listId) {
+            "all" -> repository.observeAllTasksSortedByDate()
+            "today" -> repository.observeTodayTasks()
+            else -> repository.observeTasks(listId)
+        }
     }
 }

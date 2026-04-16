@@ -75,4 +75,19 @@ interface TaskDao {
             priority DESC
     """)
     fun observeAllTasksSortedByDate(): Flow<List<TaskEntity>>
+
+    // Tasks hôm nay (start_date trong dayStart..dayEnd) hoặc không có ngày, từ tất cả lists
+    @Query("""
+        SELECT * FROM tasks
+        WHERE sync_status != 'pending_delete'
+          AND (
+            start_date_time IS NULL
+            OR (start_date_time >= :dayStart AND start_date_time < :dayEnd)
+          )
+        ORDER BY
+            CASE WHEN start_date_time IS NULL THEN 1 ELSE 0 END ASC,
+            CASE WHEN task_status = 'DONE' THEN 1 ELSE 0 END ASC,
+            priority DESC
+    """)
+    fun observeTodayTasks(dayStart: Long, dayEnd: Long): Flow<List<TaskEntity>>
 }

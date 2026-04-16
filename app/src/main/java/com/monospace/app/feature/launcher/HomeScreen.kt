@@ -84,9 +84,18 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val timerState by focusViewModel.timerState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var snackbarIsError by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { message ->
+            snackbarIsError = true
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.successEvent.collect { message ->
+            snackbarIsError = false
             snackbarHostState.showSnackbar(message)
         }
     }
@@ -94,6 +103,7 @@ fun HomeScreen(
     HomeScreenContent(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
+        snackbarIsError = snackbarIsError,
         onToggleTask = viewModel::toggleTask,
         onAddTask = viewModel::addTask,
         onDeleteSelected = viewModel::deleteSelectedTasks,
@@ -128,6 +138,7 @@ fun HomeScreen(
 fun HomeScreenContent(
     uiState: HomeUiState,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    snackbarIsError: Boolean = true,
     onToggleTask: (String, Boolean) -> Unit,
     onAddTask: (String) -> Unit,
     onDeleteSelected: () -> Unit,
@@ -163,7 +174,7 @@ fun HomeScreenContent(
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = FocusTheme.colors.primary,
+                    containerColor = if (snackbarIsError) FocusTheme.colors.destructive else FocusTheme.colors.success,
                     contentColor = FocusTheme.colors.background
                 )
             }

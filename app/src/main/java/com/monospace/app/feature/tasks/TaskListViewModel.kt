@@ -41,6 +41,9 @@ class TaskListViewModel @Inject constructor(
     private val _errorEvent = MutableSharedFlow<String>()
     val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
 
+    private val _successEvent = MutableSharedFlow<String>()
+    val successEvent: SharedFlow<String> = _successEvent.asSharedFlow()
+
     private val _baseListState = combine(
         repository.observeAllLists(),
         taskRepository.observeAllActiveTaskCount(),
@@ -93,6 +96,7 @@ class TaskListViewModel @Inject constructor(
                     )
                 )
                 hideCreateDialog()
+                _successEvent.emit("Folder \"${name.trim()}\" đã được tạo")
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể tạo danh sách: ${e.message}")
             }
@@ -105,6 +109,7 @@ class TaskListViewModel @Inject constructor(
             try {
                 repository.saveList(list.copy(name = newName.trim(), syncStatus = SyncStatus.PENDING_UPDATE))
                 cancelEdit()
+                _successEvent.emit("Đã đổi tên thành \"${newName.trim()}\"")
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể đổi tên: ${e.message}")
             }
@@ -115,6 +120,7 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.deleteList(id)
+                _successEvent.emit("Đã xóa danh sách")
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể xóa danh sách: ${e.message}")
             }

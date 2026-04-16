@@ -82,6 +82,12 @@ fun TaskListScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.successEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
     Scaffold(
         containerColor = FocusTheme.colors.background,
         snackbarHost = {

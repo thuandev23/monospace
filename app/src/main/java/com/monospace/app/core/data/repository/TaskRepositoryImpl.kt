@@ -25,6 +25,20 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeTodayTasks(): Flow<List<Task>> {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val dayStart = cal.timeInMillis
+        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        val dayEnd = cal.timeInMillis
+        return taskDao.observeTodayTasks(dayStart, dayEnd).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override fun observeAllActiveTaskCount(): Flow<Int> =
         taskDao.observeAllActiveTaskCount()
 
