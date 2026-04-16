@@ -1,12 +1,10 @@
 package com.monospace.app
 
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
-
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-
-import org.junit.Assert.*
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -22,3 +20,7 @@ class ExampleInstrumentedTest {
         assertEquals("com.monospace.app", appContext.packageName)
     }
 }
+
+//Quy tắc:
+//- src/test/ — pure JVM, không dùng Android API, chạy bằng ./gradlew testDebugUnitTest
+//- src/androidTest/ — cần Android runtime (Room, Context...), chạy bằng ./gradlew connectedDebugAndroidTest

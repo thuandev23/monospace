@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -115,6 +116,7 @@ fun CreateTaskSheet(
     var taskTitle by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     var showListMenu by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -129,94 +131,131 @@ fun CreateTaskSheet(
                 .fillMaxWidth()
                 .imePadding()
         ) {
-            BasicTextField(
-                value = taskTitle,
-                onValueChange = { taskTitle = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
-                textStyle = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary),
-                decorationBox = { innerTextField ->
-                    if (taskTitle.isEmpty()) {
-                        Text(
-                            stringResource(R.string.hint_task_title),
-                            style = FocusTheme.typography.title.copy(color = FocusTheme.colors.divider)
-                        )
+            if (showListMenu) {
+                // ── Inline folder picker (thay DropdownMenu để tránh lỗi vị trí popup) ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.label_choose_folder),
+                        style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { showListMenu = false }) {
+                        Icon(Icons.Default.Close, contentDescription = null,
+                            tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
                     }
-                    innerTextField()
                 }
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                availableLists.forEach { list ->
+                    val isSelected = list.id == currentListId
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) FocusTheme.colors.surface else Color.Transparent
+                            )
+                            .clickable {
+                                onListSelected(list.id)
+                                showListMenu = false
+                                focusRequester.requestFocus()
+                            }
+                            .padding(vertical = 14.dp, horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = FocusTheme.colors.secondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = list.name,
+                            style = FocusTheme.typography.body.copy(
+                                color = FocusTheme.colors.primary,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isSelected) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = FocusTheme.colors.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                // ── Normal create task UI ──
+                BasicTextField(
+                    value = taskTitle,
+                    onValueChange = { taskTitle = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    textStyle = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary),
+                    decorationBox = { innerTextField ->
+                        if (taskTitle.isEmpty()) {
+                            Text(
+                                stringResource(R.string.hint_task_title),
+                                style = FocusTheme.typography.title.copy(color = FocusTheme.colors.divider)
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val currentList = availableLists.find { it.id == currentListId }
                         TaskOptionChip(
                             icon = Icons.Outlined.MailOutline,
                             label = currentList?.name ?: stringResource(R.string.label_inbox),
-                            onClick = { showListMenu = true }
-                        )
-
-                        DropdownMenu(
-                            expanded = showListMenu,
-                            onDismissRequest = { showListMenu = false },
-                            modifier = Modifier.background(
-                                FocusTheme.colors.surface,
-                                RoundedCornerShape(16.dp)
-                            )
-                        ) {
-                            availableLists.forEach { list ->
-                                DropdownMenuItem(
-                                    text = { Text(list.name, style = FocusTheme.typography.body) },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.Folder,
-                                            null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    },
-                                    onClick = {
-                                        onListSelected(list.id)
-                                        showListMenu = false
-                                    }
-                                )
+                            onClick = {
+                                focusManager.clearFocus()
+                                showListMenu = true
                             }
-                        }
+                        )
+                        TaskOptionChip(
+                            icon = Icons.Default.DateRange,
+                            label = draftStartDate?.let { instant ->
+                                val zone = ZoneId.systemDefault()
+                                val date = instant.atZone(zone).toLocalDate()
+                                val today = LocalDate.now()
+                                when (date) {
+                                    today -> stringResource(R.string.label_today)
+                                    today.plusDays(1) -> stringResource(R.string.label_tomorrow)
+                                    else -> date.format(DateTimeFormatter.ofPattern("MMM d"))
+                                }
+                            } ?: stringResource(R.string.label_date),
+                            onClick = onTodayClick
+                        )
+                        TaskOptionChip(
+                            icon = Icons.Default.Notifications,
+                            label = stringResource(R.string.label_reminder),
+                            onClick = {}
+                        )
                     }
 
-                    TaskOptionChip(
-                        icon = Icons.Default.DateRange,
-                        label = draftStartDate?.let { instant ->
-                            val zone = ZoneId.systemDefault()
-                            val date = instant.atZone(zone).toLocalDate()
-                            val today = LocalDate.now()
-                            when (date) {
-                                today -> stringResource(R.string.label_today)
-                                today.plusDays(1) -> stringResource(R.string.label_tomorrow)
-                                else -> date.format(DateTimeFormatter.ofPattern("MMM d"))
-                            }
-                        } ?: stringResource(R.string.label_date),
-                        onClick = onTodayClick
-                    )
-                    TaskOptionChip(
-                        icon = Icons.Default.Notifications,
-                        label = stringResource(R.string.label_reminder),
-                        onClick = {})
-                }
-
-                IconButton(
-                    onClick = { if (taskTitle.isNotBlank()) onSave(taskTitle) },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(FocusTheme.colors.primary, CircleShape)
-                ) {
-                    Icon(Icons.Default.KeyboardArrowUp, null, tint = FocusTheme.colors.background)
+                    IconButton(
+                        onClick = { if (taskTitle.isNotBlank()) onSave(taskTitle) },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(FocusTheme.colors.primary, CircleShape)
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowUp, null, tint = FocusTheme.colors.background)
+                    }
                 }
             }
         }
@@ -874,16 +913,16 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                 ) {
                     Column {
                         val dayNames = listOf(
+                            "Sunday",
                             "Monday",
                             "Tuesday",
                             "Wednesday",
                             "Thursday",
                             "Friday",
-                            "Saturday",
-                            "Sunday"
+                            "Saturday"
                         )
                         dayNames.forEachIndexed { index, name ->
-                            val dayIdx = index + 1
+                            val dayIdx = if (index == 0) 7 else index // Sunday = 7, Monday = 1...
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

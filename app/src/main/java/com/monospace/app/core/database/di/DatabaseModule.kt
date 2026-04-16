@@ -38,7 +38,7 @@ object DatabaseModule {
                     super.onCreate(db)
                     val defaultListName = context.getString(R.string.default_task_list_name)
                     db.execSQL(
-                        "INSERT INTO lists (id, name, sync_status, created_at, updated_at) VALUES ('default', ?, 'synced', 0, 0)",
+                        "INSERT INTO lists (id, name, sync_status, sort_order, created_at, updated_at) VALUES ('default', ?, 'synced', 0, 0, 0)",
                         arrayOf(defaultListName)
                     )
                 }
