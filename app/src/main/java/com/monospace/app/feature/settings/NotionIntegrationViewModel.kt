@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.BuildConfig
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.TaskRepository
@@ -151,27 +152,116 @@ class NotionIntegrationViewModel @Inject constructor(
             _isSyncing.value = true
             _error.value = null
             try {
-                val response = notionApiService.queryDatabase(
-                    databaseId = dbId,
-                    bearerToken = "Bearer $token"
-                )
-                if (response.isSuccessful) {
-                    val pages = response.body()?.results ?: emptyList()
-                    val tasks = pages.mapNotNull { it.toTask(defaultListId = "default") }
-                    taskRepository.mergeRemoteTasks(tasks)
-                    settingsDataStore.setNotionLastSynced(
-                        Instant.now().atZone(ZoneId.systemDefault())
-                            .format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                pushLocalChanges(token, dbId)
+
+                val allPages = mutableListOf<NotionPage>()
+                var cursor: String? = null
+                do {
+                    val body: Map<String, Any> =
+                        if (cursor != null) mapOf("start_cursor" to cursor!!) else emptyMap()
+                    val response = notionApiService.queryDatabase(
+                        databaseId = dbId,
+                        bearerToken = "Bearer $token",
+                        body = body
                     )
-                } else {
-                    _error.value = "Sync thất bại (${response.code()})"
-                }
+                    if (!response.isSuccessful) {
+                        _error.value = "Sync thất bại (${response.code()})"
+                        return@launch
+                    }
+                    val result = response.body()!!
+                    allPages.addAll(result.results)
+                    cursor = if (result.hasMore) result.nextCursor else null
+                } while (cursor != null)
+
+                val tasks = allPages.mapNotNull { it.toTask(defaultListId = "default") }
+                taskRepository.mergeRemoteTasks(tasks)
+                settingsDataStore.setNotionLastSynced(
+                    Instant.now().atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                )
             } catch (e: Exception) {
                 _error.value = e.message ?: "Unknown error"
             } finally {
                 _isSyncing.value = false
             }
         }
+    }
+
+    private suspend fun pushLocalChanges(token: String, dbId: String) {
+        val bearer = "Bearer $token"
+        val pending = taskRepository.getPendingTasks()
+        for (task in pending) {
+            try {
+                when (task.syncStatus) {
+                    SyncStatus.PENDING_CREATE -> {
+                        val response = notionApiService.createPage(
+                            bearerToken = bearer,
+                            body = buildCreatePageBody(dbId, task)
+                        )
+                        if (response.isSuccessful) {
+                            val notionId = response.body()!!.id.replace("-", "")
+                            taskRepository.saveTask(task.copy(id = notionId, syncStatus = SyncStatus.SYNCED))
+                            taskRepository.hardDeleteTask(task.id)
+                        }
+                    }
+                    SyncStatus.PENDING_UPDATE -> {
+                        val pageId = task.id.toNotionPageId() ?: continue
+                        val response = notionApiService.updatePage(
+                            pageId = pageId,
+                            bearerToken = bearer,
+                            body = mapOf("properties" to buildPropertiesMap(task))
+                        )
+                        if (response.isSuccessful) {
+                            taskRepository.saveTask(task.copy(syncStatus = SyncStatus.SYNCED))
+                        }
+                    }
+                    SyncStatus.PENDING_DELETE -> {
+                        val pageId = task.id.toNotionPageId() ?: continue
+                        val response = notionApiService.updatePage(
+                            pageId = pageId,
+                            bearerToken = bearer,
+                            body = mapOf("archived" to true)
+                        )
+                        if (response.isSuccessful) {
+                            taskRepository.hardDeleteTask(task.id)
+                        }
+                    }
+                    SyncStatus.SYNCED -> Unit
+                }
+            } catch (_: Exception) {
+                // best-effort: continue pushing remaining tasks
+            }
+        }
+    }
+
+    private fun String.toNotionPageId(): String? {
+        if (length != 32 || !all { it.isLetterOrDigit() }) return null
+        return "${substring(0, 8)}-${substring(8, 12)}-${substring(12, 16)}-${substring(16, 20)}-${substring(20)}"
+    }
+
+    private fun buildCreatePageBody(dbId: String, task: Task): Map<String, Any> =
+        mapOf(
+            "parent" to mapOf("database_id" to dbId),
+            "properties" to buildPropertiesMap(task)
+        )
+
+    private fun buildPropertiesMap(task: Task): Map<String, Any> {
+        val props = mutableMapOf<String, Any>(
+            "Name" to mapOf("title" to listOf(mapOf("text" to mapOf("content" to task.title)))),
+            "Done" to mapOf("checkbox" to (task.status == TaskStatus.DONE))
+        )
+        task.startDateTime?.let { instant ->
+            val dateStr = instant.atZone(ZoneId.systemDefault()).toLocalDate().toString()
+            props["Date"] = mapOf("date" to mapOf("start" to dateStr))
+        }
+        task.notes?.let { notes ->
+            if (notes.isNotBlank()) {
+                props["Notes"] = mapOf(
+                    "rich_text" to listOf(mapOf("text" to mapOf("content" to notes)))
+                )
+            }
+        }
+        return props
     }
 
     fun disconnect() {

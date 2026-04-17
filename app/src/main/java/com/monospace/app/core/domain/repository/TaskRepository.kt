@@ -15,4 +15,6 @@ interface TaskRepository {
     suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean)
     suspend fun deleteTask(taskId: String)
     suspend fun mergeRemoteTasks(remoteTasks: List<Task>)
+    suspend fun getPendingTasks(): List<Task>
+    suspend fun hardDeleteTask(taskId: String)
 }

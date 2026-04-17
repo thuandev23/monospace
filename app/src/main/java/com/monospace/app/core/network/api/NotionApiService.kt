@@ -1,12 +1,14 @@
 package com.monospace.app.core.network.api
 
 import com.monospace.app.core.network.dto.NotionDatabasesResponse
+import com.monospace.app.core.network.dto.NotionPage
 import com.monospace.app.core.network.dto.NotionQueryResponse
 import com.monospace.app.core.network.dto.NotionTokenResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -31,4 +33,19 @@ interface NotionApiService {
         @Header("Notion-Version") notionVersion: String = "2022-06-28",
         @Body body: Map<String, @JvmSuppressWildcards Any> = emptyMap()
     ): Response<NotionQueryResponse>
+
+    @POST("pages")
+    suspend fun createPage(
+        @Header("Authorization") bearerToken: String,
+        @Header("Notion-Version") notionVersion: String = "2022-06-28",
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<NotionPage>
+
+    @PATCH("pages/{pageId}")
+    suspend fun updatePage(
+        @Path("pageId") pageId: String,
+        @Header("Authorization") bearerToken: String,
+        @Header("Notion-Version") notionVersion: String = "2022-06-28",
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Response<NotionPage>
 }

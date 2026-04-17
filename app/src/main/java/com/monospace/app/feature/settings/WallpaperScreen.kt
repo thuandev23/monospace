@@ -1,5 +1,9 @@
 package com.monospace.app.feature.settings
 
+import android.app.WallpaperManager
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,22 +34,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.ui.theme.FocusTheme
+import com.monospace.app.widget.ClockDateWidgetReceiver
+import com.monospace.app.widget.TaskListWidgetReceiver
+import com.monospace.app.widget.WidgetTheme
+import com.monospace.app.widget.WidgetThemeStore
+import com.monospace.app.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WallpaperScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var selectedWallpaper by remember { mutableStateOf<WallpaperOption?>(null) }
+    var isSaving by remember { mutableStateOf(false) }
 
     val wallpaperOptions = listOf(
         WallpaperOption(
@@ -145,12 +163,34 @@ fun WallpaperScreen(
                         if (selectedWallpaper != null) FocusTheme.colors.primary
                         else FocusTheme.colors.surface
                     )
-                    .clickable(enabled = selectedWallpaper != null) { /* save logic */ }
+                    .clickable(enabled = selectedWallpaper != null && !isSaving) {
+                        scope.launch {
+                            val option = selectedWallpaper ?: return@launch
+                            isSaving = true
+                            withContext(Dispatchers.IO) {
+                                val bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
+                                bitmap.eraseColor(option.primaryColor.toArgb())
+                                WallpaperManager.getInstance(context).setBitmap(
+                                    bitmap, null, true,
+                                    WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
+                                )
+                                bitmap.recycle()
+                            }
+                            val theme = if (option.isDark) WidgetTheme.DARK else WidgetTheme.LIGHT
+                            val awm = AppWidgetManager.getInstance(context)
+                            (awm.getAppWidgetIds(ComponentName(context, TaskListWidgetReceiver::class.java)) +
+                             awm.getAppWidgetIds(ComponentName(context, ClockDateWidgetReceiver::class.java)))
+                                .forEach { id -> WidgetThemeStore.save(context, id, theme) }
+                            WidgetUpdater.updateAll(context)
+                            isSaving = false
+                            onNavigateBack()
+                        }
+                    }
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "Save",
+                    if (isSaving) "Saving…" else "Save",
                     style = FocusTheme.typography.label.copy(
                         color = if (selectedWallpaper != null) FocusTheme.colors.background
                         else FocusTheme.colors.secondary,

@@ -72,6 +72,13 @@ class TaskRepositoryImpl @Inject constructor(
         WidgetUpdater.updateAll(context)
     }
 
+    override suspend fun getPendingTasks(): List<Task> =
+        taskDao.getPendingTasks().map { it.toDomain() }
+
+    override suspend fun hardDeleteTask(taskId: String) {
+        taskDao.hardDelete(taskId)
+    }
+
     override suspend fun mergeRemoteTasks(remoteTasks: List<Task>) {
         for (remote in remoteTasks) {
             val local = taskDao.getTaskById(remote.id)
