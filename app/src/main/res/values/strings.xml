@@ -121,4 +121,6 @@
     <string name="msg_no_lists">Chưa có danh sách nào</string>
     <string name="content_desc_create_list">Tạo danh sách</string>
     <string name="content_desc_options">Tuỳ chọn</string>
+    <string name="widget_task_list_description">Danh sách task hôm nay</string>
+    <string name="widget_clock_description">Đồng hồ và ngày tháng</string>
 </resources>

@@ -114,6 +114,10 @@ dependencies {
     implementation(libs.kotlinx.metadata.jvm)
     ksp(libs.kotlinx.metadata.jvm)
 
+    // Glance Widgets
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // Google Play Billing
     implementation(libs.billing)
     

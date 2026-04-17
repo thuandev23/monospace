@@ -53,17 +53,20 @@ import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.model.TaskStatus
+import com.monospace.app.feature.launcher.components.AddAppShortcutSheet
 import com.monospace.app.feature.launcher.components.ConfirmDeleteDialog
 import com.monospace.app.feature.launcher.components.ConfirmMarkDoneDialog
 import com.monospace.app.feature.launcher.components.CreateTaskSheet
 import com.monospace.app.feature.launcher.components.EmptyStateTask
 import com.monospace.app.feature.launcher.components.HomeTopBar
+import com.monospace.app.feature.launcher.components.LauncherShortcutsSection
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
 import com.monospace.app.feature.launcher.components.MoveToFolderSheet
 import com.monospace.app.feature.launcher.components.RescheduleSheet
 import com.monospace.app.feature.launcher.components.FocusSessionSheet
 import com.monospace.app.feature.launcher.components.SelectionActionBar
 import com.monospace.app.feature.launcher.components.TaskList
+import com.monospace.app.feature.blocking.BlockedAppOverlay
 import com.monospace.app.feature.focus.FocusViewModel
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
@@ -83,6 +86,8 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val timerState by focusViewModel.timerState.collectAsState()
+    val blockedPackage by focusViewModel.blockedPackage.collectAsState()
+    val hasUsagePermission by focusViewModel.hasUsagePermission.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarIsError by remember { mutableStateOf(true) }
 
@@ -100,38 +105,50 @@ fun HomeScreen(
         }
     }
 
-    HomeScreenContent(
-        uiState = uiState,
-        snackbarHostState = snackbarHostState,
-        snackbarIsError = snackbarIsError,
-        onToggleTask = viewModel::toggleTask,
-        onAddTask = viewModel::addTask,
-        onDeleteSelected = viewModel::deleteSelectedTasks,
-        onDeleteTask = viewModel::deleteTask,
-        onSelectAll = viewModel::selectAll,
-        onSetSelectionMode = viewModel::setSelectionMode,
-        onToggleTaskSelection = viewModel::toggleTaskSelection,
-        onMenuToggle = viewModel::setMenuExpanded,
-        onShowCreateSheet = viewModel::setShowCreateSheet,
-        onShowDatePicker = viewModel::setShowDatePicker,
-        onUpdateDraftSchedule = viewModel::updateDraftSchedule,
-        onUpdateDraftListId = viewModel::setDraftListId,
-        onSearchQueryChange = viewModel::setSearchQuery,
-        onClearSearch = viewModel::clearSearch,
-        onPriorityFilterChange = viewModel::setPriorityFilter,
-        onViewSettingsChange = viewModel::setViewSettings,
-        onMarkSelectedDone = viewModel::markSelectedTasksDone,
-        onMoveSelectedToList = viewModel::moveSelectedTasksToList,
-        onRescheduleSelected = viewModel::rescheduleSelectedTasks,
-        onNavigateToTask = onNavigateToTask,
-        onNavigateToLists = onNavigateToLists,
-        initialShowSearch = initialShowSearch,
-        focusTimerState = timerState,
-        onSetFocusMode = focusViewModel::setFocusMode,
-        onAdjustFocusDuration = focusViewModel::adjustDuration,
-        onStartFocus = focusViewModel::startFocus,
-        onStopFocus = focusViewModel::stopFocus
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        HomeScreenContent(
+            uiState = uiState,
+            snackbarHostState = snackbarHostState,
+            snackbarIsError = snackbarIsError,
+            onToggleTask = viewModel::toggleTask,
+            onAddTask = viewModel::addTask,
+            onDeleteSelected = viewModel::deleteSelectedTasks,
+            onDeleteTask = viewModel::deleteTask,
+            onSelectAll = viewModel::selectAll,
+            onSetSelectionMode = viewModel::setSelectionMode,
+            onToggleTaskSelection = viewModel::toggleTaskSelection,
+            onMenuToggle = viewModel::setMenuExpanded,
+            onShowCreateSheet = viewModel::setShowCreateSheet,
+            onShowDatePicker = viewModel::setShowDatePicker,
+            onUpdateDraftSchedule = viewModel::updateDraftSchedule,
+            onUpdateDraftListId = viewModel::setDraftListId,
+            onSearchQueryChange = viewModel::setSearchQuery,
+            onClearSearch = viewModel::clearSearch,
+            onPriorityFilterChange = viewModel::setPriorityFilter,
+            onViewSettingsChange = viewModel::setViewSettings,
+            onMarkSelectedDone = viewModel::markSelectedTasksDone,
+            onMoveSelectedToList = viewModel::moveSelectedTasksToList,
+            onRescheduleSelected = viewModel::rescheduleSelectedTasks,
+            onNavigateToTask = onNavigateToTask,
+            onNavigateToLists = onNavigateToLists,
+            initialShowSearch = initialShowSearch,
+            focusTimerState = timerState,
+            hasUsagePermission = hasUsagePermission,
+            onSetFocusMode = focusViewModel::setFocusMode,
+            onAdjustFocusDuration = focusViewModel::adjustDuration,
+            onStartFocus = focusViewModel::startFocus,
+            onStopFocus = focusViewModel::stopFocus,
+            onOpenUsageSettings = {
+                focusViewModel.openUsageSettings()
+            },
+            onRefreshUsagePermission = focusViewModel::refreshUsagePermission
+        )
+
+        BlockedAppOverlay(
+            blockedPackage = blockedPackage,
+            onDismiss = focusViewModel::stopFocusAndDeactivate
+        )
+    }
 }
 
 @Composable
@@ -162,10 +179,13 @@ fun HomeScreenContent(
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
     focusTimerState: com.monospace.app.feature.focus.FocusTimerState = com.monospace.app.feature.focus.FocusTimerState(),
+    hasUsagePermission: Boolean = true,
     onSetFocusMode: (com.monospace.app.feature.focus.FocusMode) -> Unit = {},
     onAdjustFocusDuration: (Int) -> Unit = {},
     onStartFocus: () -> Unit = {},
-    onStopFocus: () -> Unit = {}
+    onStopFocus: () -> Unit = {},
+    onOpenUsageSettings: () -> Unit = {},
+    onRefreshUsagePermission: () -> Unit = {}
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -241,10 +261,13 @@ fun HomeScreenContent(
                         onNavigateToLists = onNavigateToLists,
                         initialShowSearch = initialShowSearch,
                         focusTimerState = focusTimerState,
+                        hasUsagePermission = hasUsagePermission,
                         onSetFocusMode = onSetFocusMode,
                         onAdjustFocusDuration = onAdjustFocusDuration,
                         onStartFocus = onStartFocus,
-                        onStopFocus = onStopFocus
+                        onStopFocus = onStopFocus,
+                        onOpenUsageSettings = onOpenUsageSettings,
+                        onRefreshUsagePermission = onRefreshUsagePermission
                     )
 
                     if (uiState.showCreateSheet) {
@@ -342,15 +365,24 @@ private fun SuccessContent(
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
     focusTimerState: com.monospace.app.feature.focus.FocusTimerState = com.monospace.app.feature.focus.FocusTimerState(),
+    hasUsagePermission: Boolean = true,
     onSetFocusMode: (com.monospace.app.feature.focus.FocusMode) -> Unit = {},
     onAdjustFocusDuration: (Int) -> Unit = {},
     onStartFocus: () -> Unit = {},
-    onStopFocus: () -> Unit = {}
+    onStopFocus: () -> Unit = {},
+    onOpenUsageSettings: () -> Unit = {},
+    onRefreshUsagePermission: () -> Unit = {},
+    launcherViewModel: LauncherViewModel = hiltViewModel()
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { it.status != TaskStatus.DONE } }
     val completedTasks = remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
     var showFocusSheet by remember { mutableStateOf(false) }
+
+    val shortcuts by launcherViewModel.shortcuts.collectAsState()
+    val isEditMode by launcherViewModel.isEditMode.collectAsState()
+    val installedApps by launcherViewModel.installedApps.collectAsState()
+    var showAddAppSheet by remember { mutableStateOf(false) }
 
     // Selection action dialog states
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -390,6 +422,18 @@ private fun SuccessContent(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            LauncherShortcutsSection(
+                shortcuts = shortcuts,
+                isEditMode = isEditMode,
+                onLaunch = launcherViewModel::launchApp,
+                onRemove = launcherViewModel::removeShortcut,
+                onToggleEditMode = launcherViewModel::toggleEditMode,
+                onAddClick = {
+                    launcherViewModel.loadInstalledApps()
+                    showAddAppSheet = true
+                }
+            )
 
             // Search bar
             if (showSearchBar) {
@@ -509,11 +553,26 @@ private fun SuccessContent(
     if (showFocusSheet) {
         FocusSessionSheet(
             timerState = focusTimerState,
+            hasUsagePermission = hasUsagePermission,
             onDismiss = { showFocusSheet = false },
             onSetMode = onSetFocusMode,
             onAdjustDuration = onAdjustFocusDuration,
             onStartFocus = onStartFocus,
-            onStopFocus = onStopFocus
+            onStopFocus = onStopFocus,
+            onOpenUsageSettings = {
+                showFocusSheet = false
+                onOpenUsageSettings()
+            },
+            onRefreshUsagePermission = onRefreshUsagePermission
+        )
+    }
+
+    if (showAddAppSheet) {
+        AddAppShortcutSheet(
+            installedApps = installedApps,
+            pinnedPackages = shortcuts.map { it.packageName }.toSet(),
+            onAdd = launcherViewModel::addShortcut,
+            onDismiss = { showAddAppSheet = false }
         )
     }
 }

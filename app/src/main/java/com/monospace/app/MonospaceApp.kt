@@ -55,12 +55,21 @@ class MonospaceApp : Application(), Configuration.Provider {
                 description = "Trạng thái đồng bộ với server"
             }
 
-            manager.createNotificationChannels(listOf(reminderChannel, syncChannel))
+            val focusChannel = NotificationChannel(
+                CHANNEL_FOCUS,
+                "Focus Mode",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Thông báo khi Focus Mode đang chạy"
+            }
+
+            manager.createNotificationChannels(listOf(reminderChannel, syncChannel, focusChannel))
         }
     }
 
     companion object {
         const val CHANNEL_REMINDER = "monospace_reminder"
         const val CHANNEL_SYNC = "monospace_sync"
+        const val CHANNEL_FOCUS = "monospace_focus"
     }
 }

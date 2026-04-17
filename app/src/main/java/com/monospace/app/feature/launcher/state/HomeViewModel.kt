@@ -20,8 +20,13 @@ import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.GetTasksUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import com.monospace.app.core.domain.usecase.UpdateTaskUseCase
+import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.SavedStateHandle
+import com.monospace.app.widget.ClockDateWidget
+import com.monospace.app.widget.TaskListWidget
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +73,7 @@ sealed interface HomeUiState {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val getTasksUseCase: GetTasksUseCase,
     private val addTaskUseCase: AddTaskUseCase,
     private val toggleTaskUseCase: ToggleTaskUseCase,
@@ -77,6 +83,13 @@ class HomeViewModel @Inject constructor(
     private val taskListRepository: TaskListRepository,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
+
+    private fun refreshWidget() {
+        viewModelScope.launch {
+            try { TaskListWidget().updateAll(context) } catch (_: Exception) {}
+            try { ClockDateWidget().updateAll(context) } catch (_: Exception) {}
+        }
+    }
 
     // One-shot events → hiển thị Snackbar ở UI
     private val _errorEvent = MutableSharedFlow<String>()
@@ -249,6 +262,7 @@ class HomeViewModel @Inject constructor(
                 resetDraft()
                 setShowCreateSheet(false)
                 _successEvent.emit("Task đã được tạo")
+                refreshWidget()
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể thêm task: ${e.message}")
             }
@@ -288,6 +302,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 toggleTaskUseCase(taskId, isCompleted)
+                refreshWidget()
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể cập nhật task: ${e.message}")
             }
@@ -334,6 +349,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 deleteTaskUseCase(taskId)
+                refreshWidget()
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể xóa task: ${e.message}")
             }

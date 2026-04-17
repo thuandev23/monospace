@@ -17,6 +17,7 @@ import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import com.monospace.app.core.domain.usecase.UpdateTaskUseCase
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
+import android.content.Context
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -65,6 +66,7 @@ class HomeViewModelTest {
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true) {
         every { viewSettings } returns viewSettingsFlow
     }
+    private val context: Context = mockk(relaxed = true)
 
     private lateinit var viewModel: HomeViewModel
 
@@ -74,6 +76,7 @@ class HomeViewModelTest {
         every { getTasksUseCase(any()) } returns tasksFlow
         viewModel = HomeViewModel(
             savedStateHandle    = SavedStateHandle(),
+            context             = context,
             getTasksUseCase     = getTasksUseCase,
             addTaskUseCase      = addTaskUseCase,
             toggleTaskUseCase   = toggleTaskUseCase,

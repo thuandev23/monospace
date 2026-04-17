@@ -7,7 +7,11 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import java.time.LocalDate
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.monospace.app.core.domain.model.AddTaskPosition
+import com.monospace.app.core.domain.model.AppShortcut
 import com.monospace.app.core.domain.model.AppTheme
 import com.monospace.app.core.domain.model.GeneralSettings
 import com.monospace.app.core.domain.model.GroupOption
@@ -29,8 +33,11 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val gson = Gson()
+
     companion object {
         private val KEY_DEFAULT_LIST_ID = stringPreferencesKey("default_list_id")
+        private val KEY_LAUNCHER_SHORTCUTS = stringPreferencesKey("launcher_shortcuts")
         private val KEY_SIDEBAR_ITEM_ORDER = stringPreferencesKey("sidebar_item_order")
         private val KEY_SIDEBAR_HIDDEN_ITEMS = stringPreferencesKey("sidebar_hidden_items")
         val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -196,5 +203,19 @@ class SettingsDataStore @Inject constructor(
             prefs[KEY_GENERAL_SECOND_STATUS] = settings.secondStatus.name
             prefs[KEY_GENERAL_REVERSE_SCROLL] = settings.reverseScrollDirection
         }
+    }
+
+    // --- Launcher Shortcuts ---
+
+    val launcherShortcuts: Flow<List<AppShortcut>> = context.dataStore.data.map { prefs ->
+        val json = prefs[KEY_LAUNCHER_SHORTCUTS] ?: return@map emptyList()
+        runCatching {
+            val type = object : TypeToken<List<AppShortcut>>() {}.type
+            gson.fromJson<List<AppShortcut>>(json, type)
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun setLauncherShortcuts(shortcuts: List<AppShortcut>) {
+        context.dataStore.edit { it[KEY_LAUNCHER_SHORTCUTS] = gson.toJson(shortcuts) }
     }
 }

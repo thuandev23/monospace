@@ -60,6 +60,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.core.domain.model.DetoxBadge
+import com.monospace.app.core.domain.model.DetoxStats
 import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.ui.theme.FocusTheme
@@ -70,6 +72,7 @@ fun FocusScreen(
     viewModel: FocusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val detoxStats by viewModel.detoxStats.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -127,6 +130,7 @@ fun FocusScreen(
         } else {
             FocusContent(
                 uiState = uiState,
+                detoxStats = detoxStats,
                 modifier = Modifier.padding(padding),
                 onActivate = viewModel::activateProfile,
                 onDeactivate = viewModel::deactivate,
@@ -149,6 +153,7 @@ fun FocusScreen(
 @Composable
 private fun FocusContent(
     uiState: FocusUiState,
+    detoxStats: DetoxStats = DetoxStats(),
     modifier: Modifier = Modifier,
     onActivate: (String) -> Unit,
     onDeactivate: () -> Unit,
@@ -165,6 +170,14 @@ private fun FocusContent(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Streak + badges card
+        if (detoxStats.totalSessions > 0 || detoxStats.badges.any { it.unlocked }) {
+            item(key = "detox_stats") {
+                DetoxStatsCard(stats = detoxStats)
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+
         // Active profile banner
         uiState.activeProfile?.let { active ->
             item(key = "active_banner") {
@@ -556,5 +569,101 @@ private fun ProfileSheet(
                 )
             }
         }
+    }
+}
+
+// ─── Detox Stats ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun DetoxStatsCard(stats: DetoxStats) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(FocusTheme.colors.surface)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Streak row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StreakStat(label = "Streak hiện tại", value = "${stats.currentStreak} ngày")
+            StreakStat(label = "Dài nhất", value = "${stats.longestStreak} ngày")
+            StreakStat(label = "Tổng sessions", value = "${stats.totalSessions}")
+        }
+
+        if (stats.badges.isNotEmpty()) {
+            HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
+            BadgesRow(badges = stats.badges)
+        }
+    }
+}
+
+@Composable
+private fun StreakStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value,
+            style = FocusTheme.typography.title.copy(
+                color = FocusTheme.colors.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp
+            )
+        )
+        Text(
+            label,
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 11.sp
+            )
+        )
+    }
+}
+
+@Composable
+private fun BadgesRow(badges: List<DetoxBadge>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Badges",
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 11.sp
+            )
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            badges.forEach { badge ->
+                BadgeChip(badge = badge)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgeChip(badge: DetoxBadge) {
+    val alpha = if (badge.unlocked) 1f else 0.35f
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                if (badge.unlocked) FocusTheme.colors.primary.copy(alpha = 0.12f)
+                else FocusTheme.colors.divider.copy(alpha = 0.5f)
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+    ) {
+        Text(badge.emoji, fontSize = 20.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            badge.name,
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.primary.copy(alpha = alpha),
+                fontSize = 10.sp
+            )
+        )
     }
 }

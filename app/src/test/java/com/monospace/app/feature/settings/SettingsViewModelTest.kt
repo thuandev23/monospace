@@ -1,6 +1,7 @@
 package com.monospace.app.feature.settings
 
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.repository.TaskListRepository
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -25,13 +26,16 @@ class SettingsViewModelTest {
         every { sidebarItemOrder }   returns MutableStateFlow(emptyList())
         every { sidebarHiddenItems } returns MutableStateFlow(emptySet())
     }
+    private val taskListRepo: TaskListRepository = mockk(relaxed = true) {
+        every { observeAllLists() } returns MutableStateFlow(emptyList())
+    }
 
     private lateinit var viewModel: SettingsViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = SettingsViewModel(dataStore)
+        viewModel = SettingsViewModel(dataStore, taskListRepo)
     }
 
     @After

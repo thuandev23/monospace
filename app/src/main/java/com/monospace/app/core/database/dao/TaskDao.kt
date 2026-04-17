@@ -90,4 +90,19 @@ interface TaskDao {
             priority DESC
     """)
     fun observeTodayTasks(dayStart: Long, dayEnd: Long): Flow<List<TaskEntity>>
+
+    @Query("""
+        SELECT * FROM tasks
+        WHERE sync_status != 'pending_delete'
+          AND task_status NOT IN ('DONE', 'CANCELLED')
+          AND (
+            start_date_time IS NULL
+            OR (start_date_time >= :dayStart AND start_date_time < :dayEnd)
+          )
+        ORDER BY
+            CASE WHEN start_date_time IS NULL THEN 1 ELSE 0 END ASC,
+            priority DESC
+        LIMIT 20
+    """)
+    suspend fun getTodayTasksSnapshot(dayStart: Long, dayEnd: Long): List<TaskEntity>
 }

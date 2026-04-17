@@ -1670,11 +1670,14 @@ fun RescheduleSheet(
 @Composable
 fun FocusSessionSheet(
     timerState: FocusTimerState,
+    hasUsagePermission: Boolean = true,
     onDismiss: () -> Unit,
     onSetMode: (FocusMode) -> Unit,
     onAdjustDuration: (Int) -> Unit,
     onStartFocus: () -> Unit,
-    onStopFocus: () -> Unit
+    onStopFocus: () -> Unit,
+    onOpenUsageSettings: () -> Unit = {},
+    onRefreshUsagePermission: () -> Unit = {}
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1747,6 +1750,36 @@ fun FocusSessionSheet(
                         color = FocusTheme.colors.success
                     )
                 )
+            }
+
+            // Usage permission banner
+            if (!hasUsagePermission) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FocusTheme.colors.surface)
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Cấp quyền Usage Access\nđể chặn ứng dụng",
+                        style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary),
+                        modifier = Modifier.weight(1f)
+                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            onOpenUsageSettings()
+                            onRefreshUsagePermission()
+                        }
+                    ) {
+                        Text(
+                            "Cấp quyền",
+                            style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.primary)
+                        )
+                    }
+                }
             }
 
             // Start / Stop button

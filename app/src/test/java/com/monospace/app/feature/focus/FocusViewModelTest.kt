@@ -1,8 +1,10 @@
 package com.monospace.app.feature.focus
 
+import android.content.Context
 import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.FocusProfileRepository
+import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -43,13 +45,19 @@ class FocusViewModelTest {
     private val taskListRepo: TaskListRepository = mockk(relaxed = true) {
         every { observeAllLists() } returns listsFlow
     }
+    private val sessionRepo: FocusSessionRepository = mockk(relaxed = true) {
+        every { observeStats() } returns kotlinx.coroutines.flow.MutableStateFlow(
+            com.monospace.app.core.domain.model.DetoxStats()
+        )
+    }
+    private val context: Context = mockk(relaxed = true)
 
     private lateinit var viewModel: FocusViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FocusViewModel(focusRepo, taskListRepo)
+        viewModel = FocusViewModel(context, focusRepo, taskListRepo, sessionRepo)
     }
 
     @After

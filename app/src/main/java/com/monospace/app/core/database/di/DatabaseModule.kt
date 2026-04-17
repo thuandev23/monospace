@@ -8,6 +8,7 @@ import com.monospace.app.R
 import com.monospace.app.core.database.DatabaseMigrations
 import com.monospace.app.core.database.FocusDatabase
 import com.monospace.app.core.database.dao.FocusProfileDao
+import com.monospace.app.core.database.dao.FocusSessionDao
 import com.monospace.app.core.database.dao.SyncQueueDao
 import com.monospace.app.core.database.dao.TaskDao
 import com.monospace.app.core.database.dao.TaskListDao
@@ -32,7 +33,7 @@ object DatabaseModule {
             FocusDatabase::class.java,
             DATABASE_NAME
         )
-            .addMigrations(DatabaseMigrations.MIGRATION_1_2, DatabaseMigrations.MIGRATION_2_3, DatabaseMigrations.MIGRATION_3_4, DatabaseMigrations.MIGRATION_4_5)
+            .addMigrations(DatabaseMigrations.MIGRATION_1_2, DatabaseMigrations.MIGRATION_2_3, DatabaseMigrations.MIGRATION_3_4, DatabaseMigrations.MIGRATION_4_5, DatabaseMigrations.MIGRATION_5_6)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -61,4 +62,8 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideFocusProfileDao(database: FocusDatabase): FocusProfileDao = database.focusProfileDao()
+
+    @Provides
+    @Singleton
+    fun provideFocusSessionDao(database: FocusDatabase): FocusSessionDao = database.focusSessionDao()
 }

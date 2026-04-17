@@ -106,7 +106,7 @@ object DatabaseMigrations {
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_sync_status` ON `tasks` (`sync_status`)")
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_external_id` ON `tasks` (`external_id`)")
 
-            // Recreate lists with DEFAULT 0 on sort_order
+            // ─── Recreate lists with DEFAULT 0 on sort_order
             db.execSQL(
                 """CREATE TABLE IF NOT EXISTS `lists_new` (
                     `id` TEXT NOT NULL,
@@ -125,6 +125,20 @@ object DatabaseMigrations {
             )
             db.execSQL("DROP TABLE `lists`")
             db.execSQL("ALTER TABLE `lists_new` RENAME TO `lists`")
+        }
+    }
+
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `focus_sessions` (
+                    `id` TEXT NOT NULL,
+                    `completed_at` INTEGER NOT NULL,
+                    `duration_minutes` INTEGER NOT NULL,
+                    `profile_id` TEXT,
+                    PRIMARY KEY(`id`)
+                )"""
+            )
         }
     }
 }

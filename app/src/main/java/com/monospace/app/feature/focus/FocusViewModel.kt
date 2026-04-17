@@ -1,12 +1,20 @@
 package com.monospace.app.feature.focus
 
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.domain.model.DetoxStats
 import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.FocusProfileRepository
+import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
+import com.monospace.app.core.service.AppBlockingService
+import com.monospace.app.core.service.AppBlockingState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,8 +57,10 @@ sealed interface FocusEvent {
 
 @HiltViewModel
 class FocusViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val focusRepo: FocusProfileRepository,
-    private val taskListRepo: TaskListRepository
+    private val taskListRepo: TaskListRepository,
+    private val sessionRepo: FocusSessionRepository
 ) : ViewModel() {
 
     private val _showCreateSheet = MutableStateFlow(false)
@@ -64,6 +74,33 @@ class FocusViewModel @Inject constructor(
     val timerState: StateFlow<FocusTimerState> = _timerState.asStateFlow()
 
     private var timerJob: Job? = null
+
+    val blockedPackage: StateFlow<String?> = AppBlockingState.blockedPackage
+
+    val detoxStats: StateFlow<DetoxStats> = sessionRepo.observeStats()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DetoxStats())
+
+    private val _hasUsagePermission = MutableStateFlow(checkUsagePermission())
+    val hasUsagePermission: StateFlow<Boolean> = _hasUsagePermission.asStateFlow()
+
+    fun refreshUsagePermission() {
+        _hasUsagePermission.value = checkUsagePermission()
+    }
+
+    private fun checkUsagePermission(): Boolean {
+        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            ?: return false
+        val now = System.currentTimeMillis()
+        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 10_000, now)
+        return stats != null && stats.isNotEmpty()
+    }
+
+    fun openUsageSettings() {
+        val intent = android.content.Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 
     val uiState: StateFlow<FocusUiState> = combine(
         focusRepo.observeAll(),
@@ -166,6 +203,14 @@ class FocusViewModel @Inject constructor(
                 _timerState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
             }
             _timerState.update { it.copy(isRunning = false, isFinished = true) }
+            AppBlockingService.stop(context)
+            val durationMinutes = _timerState.value.durationMinutes
+            val profileId = uiState.value.activeProfile?.id
+            sessionRepo.recordSession(durationMinutes, profileId)
+        }
+        val activeProfile = uiState.value.activeProfile
+        if (activeProfile != null && activeProfile.allowedAppIds.isNotEmpty() && checkUsagePermission()) {
+            AppBlockingService.start(context)
         }
     }
 
@@ -175,6 +220,12 @@ class FocusViewModel @Inject constructor(
         _timerState.update {
             it.copy(isRunning = false, isFinished = false, remainingSeconds = it.durationMinutes * 60L)
         }
+        AppBlockingService.stop(context)
+    }
+
+    fun stopFocusAndDeactivate() {
+        stopFocus()
+        deactivate()
     }
 
     fun deleteProfile(id: String) {
