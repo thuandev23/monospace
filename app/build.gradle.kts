@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,6 +24,13 @@ android {
         // Đặt false khi chưa có backend. Khi backend sẵn sàng đổi thành true.
         buildConfigField("boolean", "BACKEND_ENABLED", "false")
         buildConfigField("String", "BASE_URL", "\"https://api.monospace.app/v1/\"")
+
+        val localProps = Properties().apply {
+            rootProject.file("local.properties").takeIf { it.exists() }
+                ?.reader()?.use { load(it) }
+        }
+        buildConfigField("String", "NOTION_CLIENT_ID", "\"${localProps.getProperty("NOTION_CLIENT_ID", "")}\"")
+        buildConfigField("String", "NOTION_CLIENT_SECRET", "\"${localProps.getProperty("NOTION_CLIENT_SECRET", "")}\"")
 
         vectorDrawables {
             useSupportLibrary = true

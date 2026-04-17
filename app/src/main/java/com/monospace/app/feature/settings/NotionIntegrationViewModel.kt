@@ -2,6 +2,7 @@ package com.monospace.app.feature.settings
 
 import android.util.Base64
 import androidx.lifecycle.ViewModel
+import com.monospace.app.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.network.api.NotionApiService
@@ -91,8 +92,8 @@ class NotionIntegrationViewModel @Inject constructor(
     fun clearError() { _error.value = null }
 
     companion object {
-        const val NOTION_CLIENT_ID = "your-notion-client-id"
-        const val NOTION_CLIENT_SECRET = "your-notion-client-secret"
+        val NOTION_CLIENT_ID get() = BuildConfig.NOTION_CLIENT_ID
+        val NOTION_CLIENT_SECRET get() = BuildConfig.NOTION_CLIENT_SECRET
         const val NOTION_REDIRECT_URI = "monospace://notion-auth"
         fun buildOAuthUrl() =
             "https://api.notion.com/v1/oauth/authorize" +

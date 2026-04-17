@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.ui.theme.FocusTheme
 
-private enum class UnlockScreen { NONE, BREATHING, TOUCH_GRASS }
+private enum class UnlockScreen { NONE, BREATHING, TOUCH_GRASS, PUSH_UP }
 
 @Composable
 fun BlockedAppOverlay(
@@ -64,10 +63,14 @@ fun BlockedAppOverlay(
                 UnlockScreen.TOUCH_GRASS -> TouchGrassScreen(
                     onDismiss = { activeUnlock = UnlockScreen.NONE }
                 )
+                UnlockScreen.PUSH_UP -> PushUpScreen(
+                    onDismiss = { activeUnlock = UnlockScreen.NONE }
+                )
                 UnlockScreen.NONE -> BlockedMainContent(
                     blockedPackage = blockedPackage ?: "",
                     onBreathing = { activeUnlock = UnlockScreen.BREATHING },
                     onTouchGrass = { activeUnlock = UnlockScreen.TOUCH_GRASS },
+                    onPushUp = { activeUnlock = UnlockScreen.PUSH_UP },
                     onDeactivate = onDismiss
                 )
             }
@@ -80,6 +83,7 @@ private fun BlockedMainContent(
     blockedPackage: String,
     onBreathing: () -> Unit,
     onTouchGrass: () -> Unit,
+    onPushUp: () -> Unit,
     onDeactivate: () -> Unit
 ) {
     val context = LocalContext.current
@@ -148,61 +152,29 @@ private fun BlockedMainContent(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Button(
-                    onClick = onBreathing,
+                UnlockButton(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = FocusTheme.colors.surface,
-                        contentColor = FocusTheme.colors.primary
-                    )
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🌬️", fontSize = 22.sp)
-                        Text(
-                            "Thở",
-                            style = FocusTheme.typography.caption.copy(
-                                color = FocusTheme.colors.primary
-                            )
-                        )
-                        Text(
-                            "5 phút nghỉ",
-                            style = FocusTheme.typography.caption.copy(
-                                color = FocusTheme.colors.secondary,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onTouchGrass,
+                    emoji = "🌬️",
+                    label = "Thở",
+                    sublabel = "5 phút",
+                    onClick = onBreathing
+                )
+                UnlockButton(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = FocusTheme.colors.surface,
-                        contentColor = FocusTheme.colors.primary
-                    )
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🌿", fontSize = 22.sp)
-                        Text(
-                            "Ra ngoài",
-                            style = FocusTheme.typography.caption.copy(
-                                color = FocusTheme.colors.primary
-                            )
-                        )
-                        Text(
-                            "15 phút nghỉ",
-                            style = FocusTheme.typography.caption.copy(
-                                color = FocusTheme.colors.secondary,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-                }
+                    emoji = "🌿",
+                    label = "Ra ngoài",
+                    sublabel = "15 phút",
+                    onClick = onTouchGrass
+                )
+                UnlockButton(
+                    modifier = Modifier.weight(1f),
+                    emoji = "💪",
+                    label = "Push-up",
+                    sublabel = "3 phút",
+                    onClick = onPushUp
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -215,6 +187,40 @@ private fun BlockedMainContent(
                     )
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun UnlockButton(
+    modifier: Modifier = Modifier,
+    emoji: String,
+    label: String,
+    sublabel: String,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = FocusTheme.colors.surface,
+            contentColor = FocusTheme.colors.primary
+        )
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(emoji, fontSize = 20.sp)
+            Text(
+                label,
+                style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.primary)
+            )
+            Text(
+                sublabel,
+                style = FocusTheme.typography.caption.copy(
+                    color = FocusTheme.colors.secondary,
+                    fontSize = 10.sp
+                )
+            )
         }
     }
 }

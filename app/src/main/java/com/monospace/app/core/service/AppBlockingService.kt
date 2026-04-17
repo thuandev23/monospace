@@ -1,11 +1,13 @@
 package com.monospace.app.core.service
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import com.monospace.app.MainActivity
 import com.monospace.app.MonospaceApp
@@ -55,7 +57,7 @@ class AppBlockingService : Service() {
                 ?: return@launch
             while (true) {
                 checkAndBlock(usm)
-                delay(500L)
+                delay(1_000L)
             }
         }
     }
@@ -90,9 +92,25 @@ class AppBlockingService : Service() {
 
     private fun bringToFront() {
         val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
-        startActivity(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val pi = PendingIntent.getActivity(
+                this, BLOCK_REQUEST_CODE, intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            val notif = Notification.Builder(this, MonospaceApp.CHANNEL_FOCUS)
+                .setContentTitle("Focus đang hoạt động")
+                .setContentText("Đang chặn ứng dụng bị hạn chế")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setFullScreenIntent(pi, true)
+                .setOngoing(true)
+                .build()
+            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(NOTIFICATION_ID, notif)
+        } else {
+            startActivity(intent)
+        }
     }
 
     private fun buildNotification(): Notification {
@@ -112,6 +130,7 @@ class AppBlockingService : Service() {
 
     companion object {
         const val NOTIFICATION_ID = 1001
+        private const val BLOCK_REQUEST_CODE = 1002
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, AppBlockingService::class.java))

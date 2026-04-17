@@ -1,10 +1,13 @@
 package com.monospace.app.core.data.repository
 
+import android.content.Context
 import com.monospace.app.core.data.mapper.toDomain
 import com.monospace.app.core.data.mapper.toEntity
 import com.monospace.app.core.database.dao.TaskDao
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.repository.TaskRepository
+import com.monospace.app.widget.WidgetUpdater
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -12,7 +15,8 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 class TaskRepositoryImpl @Inject constructor(
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    @ApplicationContext private val context: Context
 ) : TaskRepository {
 
     override fun observeTasks(listId: String): Flow<List<Task>> {
@@ -54,15 +58,18 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun saveTask(task: Task) {
         taskDao.upsert(task.toEntity())
+        WidgetUpdater.updateAll(context)
     }
 
     override suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean) {
         val status = if (isCompleted) "DONE" else "NOT_DONE"
         taskDao.updateTaskStatus(taskId, status)
+        WidgetUpdater.updateAll(context)
     }
 
     override suspend fun deleteTask(taskId: String) {
         taskDao.markAsDeleted(taskId)
+        WidgetUpdater.updateAll(context)
     }
 
     override suspend fun mergeRemoteTasks(remoteTasks: List<Task>) {
