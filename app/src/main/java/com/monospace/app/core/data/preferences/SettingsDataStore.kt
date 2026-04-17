@@ -154,9 +154,15 @@ class SettingsDataStore @Inject constructor(
 
     private val KEY_NOTION_ACCESS_TOKEN = stringPreferencesKey("notion_access_token")
     private val KEY_NOTION_WORKSPACE = stringPreferencesKey("notion_workspace_name")
+    private val KEY_NOTION_DATABASE_ID = stringPreferencesKey("notion_database_id")
+    private val KEY_NOTION_DATABASE_NAME = stringPreferencesKey("notion_database_name")
+    private val KEY_NOTION_LAST_SYNCED = stringPreferencesKey("notion_last_synced")
 
     val notionAccessToken: Flow<String?> = context.dataStore.data.map { it[KEY_NOTION_ACCESS_TOKEN] }
     val notionWorkspaceName: Flow<String?> = context.dataStore.data.map { it[KEY_NOTION_WORKSPACE] }
+    val notionDatabaseId: Flow<String?> = context.dataStore.data.map { it[KEY_NOTION_DATABASE_ID] }
+    val notionDatabaseName: Flow<String?> = context.dataStore.data.map { it[KEY_NOTION_DATABASE_NAME] }
+    val notionLastSynced: Flow<String?> = context.dataStore.data.map { it[KEY_NOTION_LAST_SYNCED] }
 
     suspend fun setNotionConnection(token: String, workspaceName: String) {
         context.dataStore.edit { prefs ->
@@ -165,10 +171,24 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setNotionDatabase(id: String, name: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_NOTION_DATABASE_ID] = id
+            prefs[KEY_NOTION_DATABASE_NAME] = name
+        }
+    }
+
+    suspend fun setNotionLastSynced(timestamp: String) {
+        context.dataStore.edit { it[KEY_NOTION_LAST_SYNCED] = timestamp }
+    }
+
     suspend fun clearNotionConnection() {
         context.dataStore.edit { prefs ->
             prefs.remove(KEY_NOTION_ACCESS_TOKEN)
             prefs.remove(KEY_NOTION_WORKSPACE)
+            prefs.remove(KEY_NOTION_DATABASE_ID)
+            prefs.remove(KEY_NOTION_DATABASE_NAME)
+            prefs.remove(KEY_NOTION_LAST_SYNCED)
         }
     }
 

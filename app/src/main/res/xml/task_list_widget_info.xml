@@ -7,4 +7,5 @@
     android:updatePeriodMillis="1800000"
     android:description="@string/widget_task_list_description"
     android:widgetCategory="home_screen"
-    android:widgetFeatures="reconfigurable" />
+    android:configure="com.monospace.app.widget.WidgetConfigurationActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

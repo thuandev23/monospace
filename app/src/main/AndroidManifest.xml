@@ -101,6 +101,15 @@
                 <data android:scheme="monospace" android:host="notion-auth" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".widget.WidgetConfigurationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MONOSPACE">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

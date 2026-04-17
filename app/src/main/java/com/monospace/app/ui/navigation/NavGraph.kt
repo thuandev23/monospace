@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.feature.detail.TaskDetailScreen
+import com.monospace.app.feature.focus.DetoxStatsScreen
 import com.monospace.app.feature.focus.FocusScreen
 import com.monospace.app.feature.launcher.HomeScreen
 import com.monospace.app.feature.onboardings.OnboardingScreen
@@ -44,6 +45,7 @@ sealed class Screen(val route: String) {
     object TabBarSettings : Screen("tab_bar_settings")
     object ProUpgrade : Screen("pro_upgrade")
     object NotionIntegration : Screen("notion_integration")
+    object DetoxStats : Screen("detox_stats")
     object RemindersIntegration : Screen("reminders_integration")
     object TaskDetail : Screen("task/{taskId}") {
         fun withId(taskId: String) = "task/$taskId"
@@ -165,7 +167,12 @@ fun MonospaceNavGraph(
             RemindersIntegrationScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Screen.Focus.route) {
-            FocusScreen()
+            FocusScreen(
+                onNavigateToDetoxStats = { navController.navigate(Screen.DetoxStats.route) }
+            )
+        }
+        composable(Screen.DetoxStats.route) {
+            DetoxStatsScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Screen.Search.route) {
             SearchScreen(

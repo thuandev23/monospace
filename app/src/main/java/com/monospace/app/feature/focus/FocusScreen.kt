@@ -69,6 +69,7 @@ import com.monospace.app.ui.theme.FocusTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FocusScreen(
+    onNavigateToDetoxStats: () -> Unit = {},
     viewModel: FocusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -135,7 +136,8 @@ fun FocusScreen(
                 onActivate = viewModel::activateProfile,
                 onDeactivate = viewModel::deactivate,
                 onEdit = viewModel::showEditSheet,
-                onDelete = viewModel::deleteProfile
+                onDelete = viewModel::deleteProfile,
+                onViewDetoxStats = onNavigateToDetoxStats
             )
         }
     }
@@ -158,7 +160,8 @@ private fun FocusContent(
     onActivate: (String) -> Unit,
     onDeactivate: () -> Unit,
     onEdit: (FocusProfile) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onViewDetoxStats: () -> Unit = {}
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -173,7 +176,7 @@ private fun FocusContent(
         // Streak + badges card
         if (detoxStats.totalSessions > 0 || detoxStats.badges.any { it.unlocked }) {
             item(key = "detox_stats") {
-                DetoxStatsCard(stats = detoxStats)
+                DetoxStatsCard(stats = detoxStats, onViewMore = onViewDetoxStats)
                 Spacer(Modifier.height(4.dp))
             }
         }
@@ -575,7 +578,7 @@ private fun ProfileSheet(
 // ─── Detox Stats ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun DetoxStatsCard(stats: DetoxStats) {
+private fun DetoxStatsCard(stats: DetoxStats, onViewMore: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -584,14 +587,27 @@ private fun DetoxStatsCard(stats: DetoxStats) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Streak row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            StreakStat(label = "Streak hiện tại", value = "${stats.currentStreak} ngày")
-            StreakStat(label = "Dài nhất", value = "${stats.longestStreak} ngày")
-            StreakStat(label = "Tổng sessions", value = "${stats.totalSessions}")
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StreakStat(label = "Streak hiện tại", value = "${stats.currentStreak} ngày")
+                StreakStat(label = "Dài nhất", value = "${stats.longestStreak} ngày")
+                StreakStat(label = "Tổng sessions", value = "${stats.totalSessions}")
+            }
+            TextButton(onClick = onViewMore) {
+                Text(
+                    "Chi tiết",
+                    style = FocusTheme.typography.caption.copy(
+                        color = FocusTheme.colors.primary,
+                        fontSize = 12.sp
+                    )
+                )
+            }
         }
 
         if (stats.badges.isNotEmpty()) {

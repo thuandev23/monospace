@@ -38,8 +38,9 @@ import com.monospace.app.core.service.AppBlockingState
 import com.monospace.app.ui.theme.FocusTheme
 
 private const val REQUIRED_REPS = 5
-private const val UP_THRESHOLD = 7.5f    // z > này = vị trí lên
-private const val DOWN_THRESHOLD = 3.5f  // z < này = vị trí xuống
+// Dùng magnitude |a| = sqrt(x²+y²+z²) — hoạt động bất kể điện thoại đặt hướng nào
+private const val MAG_UP = 12.5f      // ngực đẩy lên (magnitude > gravity)
+private const val MAG_DOWN = 7.5f     // ngực xuống thấp (magnitude < gravity)
 private const val UNLOCK_DURATION_MS = 3 * 60 * 1_000L
 
 @Composable
@@ -57,16 +58,19 @@ fun PushUpScreen(onDismiss: () -> Unit) {
             return@DisposableEffect onDispose {}
         }
 
-        var phase = "UP"
+        var phase = "NEUTRAL"
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 if (done) return
+                val x = event.values[0]
+                val y = event.values[1]
                 val z = event.values[2]
+                val mag = Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
                 when {
-                    phase == "UP" && z < DOWN_THRESHOLD -> phase = "DOWN"
-                    phase == "DOWN" && z > UP_THRESHOLD -> {
-                        phase = "UP"
+                    phase != "DOWN" && mag < MAG_DOWN -> phase = "DOWN"
+                    phase == "DOWN" && mag > MAG_UP -> {
+                        phase = "NEUTRAL"
                         repCount++
                         if (repCount >= REQUIRED_REPS) {
                             done = true
@@ -122,7 +126,7 @@ private fun PushUpCountingContent(repCount: Int, onDismiss: () -> Unit) {
     Spacer(Modifier.height(8.dp))
 
     Text(
-        "Đặt điện thoại xuống sàn\nLàm $REQUIRED_REPS push-up để mở khóa 3 phút",
+        "Đặt điện thoại lên lưng hoặc sàn dưới ngực.\nLàm $REQUIRED_REPS push-up để mở khóa 3 phút.",
         style = FocusTheme.typography.body.copy(
             color = FocusTheme.colors.secondary,
             textAlign = TextAlign.Center

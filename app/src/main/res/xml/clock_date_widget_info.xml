@@ -6,4 +6,6 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:description="@string/widget_clock_description"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:configure="com.monospace.app.widget.WidgetConfigurationActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

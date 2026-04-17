@@ -9,6 +9,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -36,13 +37,16 @@ class ClockDateWidget : GlanceAppWidget() {
         val taskCount = fetchTodayTaskCount(context)
         val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
         val date = formatDate(LocalDate.now())
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val colors = WidgetThemeStore.load(context, appWidgetId).toColorSet()
 
         provideContent {
             ClockDateWidgetContent(
                 context = context,
                 time = time,
                 date = date,
-                taskCount = taskCount
+                taskCount = taskCount,
+                colors = colors
             )
         }
     }
@@ -79,7 +83,8 @@ private fun ClockDateWidgetContent(
     context: Context,
     time: String,
     date: String,
-    taskCount: Int
+    taskCount: Int,
+    colors: WidgetColorSet = WidgetTheme.AUTO.toColorSet()
 ) {
     val openApp = actionStartActivity(
         Intent(context, MainActivity::class.java)
@@ -89,7 +94,7 @@ private fun ClockDateWidgetContent(
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(WidgetColors.surface)
+            .background(colors.surface)
             .padding(16.dp)
             .clickable(openApp),
         contentAlignment = Alignment.CenterStart
@@ -98,30 +103,20 @@ private fun ClockDateWidgetContent(
             Text(
                 text = time,
                 style = TextStyle(
-                    color = WidgetColors.primary,
+                    color = colors.primary,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
-
             Spacer(GlanceModifier.height(4.dp))
-
             Text(
                 text = date,
-                style = TextStyle(
-                    color = WidgetColors.secondary,
-                    fontSize = 13.sp
-                )
+                style = TextStyle(color = colors.secondary, fontSize = 13.sp)
             )
-
             Spacer(GlanceModifier.height(8.dp))
-
             Text(
                 text = if (taskCount == 0) "Không có task" else "$taskCount task hôm nay",
-                style = TextStyle(
-                    color = WidgetColors.accent,
-                    fontSize = 12.sp
-                )
+                style = TextStyle(color = colors.accent, fontSize = 12.sp)
             )
         }
     }

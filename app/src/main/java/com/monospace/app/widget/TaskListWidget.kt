@@ -7,10 +7,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -50,11 +51,15 @@ class TaskListWidget : GlanceAppWidget() {
         val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val tasks = ep.taskDao().getTodayTasksSnapshot(dayStart, dayEnd)
 
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val colors = WidgetThemeStore.load(context, appWidgetId).toColorSet()
+
         provideContent {
             TaskListWidgetContent(
                 context = context,
                 tasks = tasks.take(MAX_VISIBLE),
-                remaining = (tasks.size - MAX_VISIBLE).coerceAtLeast(0)
+                remaining = (tasks.size - MAX_VISIBLE).coerceAtLeast(0),
+                colors = colors
             )
         }
     }
@@ -68,7 +73,8 @@ class TaskListWidget : GlanceAppWidget() {
 private fun TaskListWidgetContent(
     context: Context,
     tasks: List<TaskEntity>,
-    remaining: Int
+    remaining: Int,
+    colors: WidgetColorSet = WidgetTheme.AUTO.toColorSet()
 ) {
     val openApp = actionStartActivity(
         Intent(context, MainActivity::class.java)
@@ -78,12 +84,11 @@ private fun TaskListWidgetContent(
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(WidgetColors.surface)
+            .background(colors.surface)
             .padding(16.dp)
             .clickable(openApp)
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            // Header
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -91,7 +96,7 @@ private fun TaskListWidgetContent(
                 Text(
                     text = "Tasks hôm nay",
                     style = TextStyle(
-                        color = WidgetColors.primary,
+                        color = colors.primary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     ),
@@ -100,10 +105,7 @@ private fun TaskListWidgetContent(
                 Text(
                     text = java.time.LocalDate.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")),
-                    style = TextStyle(
-                        color = WidgetColors.secondary,
-                        fontSize = 12.sp
-                    )
+                    style = TextStyle(color = colors.secondary, fontSize = 12.sp)
                 )
             }
 
@@ -116,25 +118,18 @@ private fun TaskListWidgetContent(
                 ) {
                     Text(
                         "Không có task nào hôm nay 🎉",
-                        style = TextStyle(
-                            color = WidgetColors.secondary,
-                            fontSize = 13.sp
-                        )
+                        style = TextStyle(color = colors.secondary, fontSize = 13.sp)
                     )
                 }
             } else {
                 tasks.forEach { task ->
-                    TaskRow(task = task)
+                    TaskRow(task = task, colors = colors)
                     Spacer(GlanceModifier.height(8.dp))
                 }
-
                 if (remaining > 0) {
                     Text(
                         text = "+$remaining task khác",
-                        style = TextStyle(
-                            color = WidgetColors.secondary,
-                            fontSize = 11.sp
-                        )
+                        style = TextStyle(color = colors.secondary, fontSize = 11.sp)
                     )
                 }
             }
@@ -143,24 +138,25 @@ private fun TaskListWidgetContent(
 }
 
 @Composable
-private fun TaskRow(task: TaskEntity) {
+private fun TaskRow(task: TaskEntity, colors: WidgetColorSet) {
     val isDone = task.taskStatus == "DONE"
+    val toggleAction = actionRunCallback<ToggleTaskAction>(
+        actionParametersOf(taskIdKey to task.id, taskDoneKey to isDone)
+    )
     Row(
-        modifier = GlanceModifier.fillMaxWidth(),
+        modifier = GlanceModifier.fillMaxWidth().clickable(toggleAction),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = GlanceModifier
                 .size(6.dp)
-                .background(
-                    if (isDone) WidgetColors.secondary else WidgetColors.primary
-                )
+                .background(if (isDone) colors.secondary else colors.primary)
         ) {}
         Spacer(GlanceModifier.width(8.dp))
         Text(
             text = task.title,
             style = TextStyle(
-                color = if (isDone) WidgetColors.secondary else WidgetColors.onSurface,
+                color = if (isDone) colors.secondary else colors.onSurface,
                 fontSize = 13.sp
             ),
             maxLines = 1
