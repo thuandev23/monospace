@@ -7,6 +7,8 @@ import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 class TaskRepositoryImpl @Inject constructor(
@@ -26,14 +28,10 @@ class TaskRepositoryImpl @Inject constructor(
     }
 
     override fun observeTodayTasks(): Flow<List<Task>> {
-        val cal = java.util.Calendar.getInstance()
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        cal.set(java.util.Calendar.MINUTE, 0)
-        cal.set(java.util.Calendar.SECOND, 0)
-        cal.set(java.util.Calendar.MILLISECOND, 0)
-        val dayStart = cal.timeInMillis
-        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
-        val dayEnd = cal.timeInMillis
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val dayStart = today.atStartOfDay(zone).toInstant().toEpochMilli()
+        val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         return taskDao.observeTodayTasks(dayStart, dayEnd).map { entities ->
             entities.map { it.toDomain() }
         }
@@ -43,14 +41,10 @@ class TaskRepositoryImpl @Inject constructor(
         taskDao.observeAllActiveTaskCount()
 
     override fun observeTodayTaskCount(): Flow<Int> {
-        val cal = java.util.Calendar.getInstance()
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        cal.set(java.util.Calendar.MINUTE, 0)
-        cal.set(java.util.Calendar.SECOND, 0)
-        cal.set(java.util.Calendar.MILLISECOND, 0)
-        val dayStart = cal.timeInMillis
-        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
-        val dayEnd = cal.timeInMillis
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now()
+        val dayStart = today.atStartOfDay(zone).toInstant().toEpochMilli()
+        val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         return taskDao.observeTodayTaskCount(dayStart, dayEnd)
     }
 
