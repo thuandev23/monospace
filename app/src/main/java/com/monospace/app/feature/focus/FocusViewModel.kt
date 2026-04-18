@@ -5,10 +5,12 @@ import android.content.Context
 import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.domain.model.AppInfo
 import com.monospace.app.core.domain.model.DetoxStats
 import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.FocusSchedule
 import com.monospace.app.core.domain.model.TaskList
+import com.monospace.app.core.domain.repository.AppRepository
 import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
@@ -47,6 +49,7 @@ data class FocusUiState(
     val profiles: List<FocusProfile> = emptyList(),
     val activeProfile: FocusProfile? = null,
     val availableLists: List<TaskList> = emptyList(),
+    val installedApps: List<AppInfo> = emptyList(),
     val isLoading: Boolean = true,
     // Sheet state
     val showCreateSheet: Boolean = false,
@@ -63,7 +66,8 @@ class FocusViewModel @Inject constructor(
     private val focusRepo: FocusProfileRepository,
     private val taskListRepo: TaskListRepository,
     private val sessionRepo: FocusSessionRepository,
-    private val scheduleEnforcer: FocusScheduleEnforcer
+    private val scheduleEnforcer: FocusScheduleEnforcer,
+    private val appRepo: AppRepository
 ) : ViewModel() {
 
     private val _showCreateSheet = MutableStateFlow(false)
@@ -116,6 +120,7 @@ class FocusViewModel @Inject constructor(
             profiles = profiles,
             activeProfile = active,
             availableLists = lists,
+            installedApps = appRepo.getInstalledApps(),
             isLoading = false,
             showCreateSheet = showSheet,
             editingProfile = editing
@@ -141,18 +146,30 @@ class FocusViewModel @Inject constructor(
         _editingProfile.value = null
     }
 
-    fun saveProfile(name: String, linkedListId: String?) {
+    fun saveProfile(
+        name: String,
+        linkedListId: String?,
+        allowedAppIds: Set<String> = emptySet(),
+        schedule: FocusSchedule? = null
+    ) {
         if (name.isBlank()) return
         viewModelScope.launch {
             try {
                 val existing = _editingProfile.value
                 val profile = if (existing != null) {
-                    existing.copy(name = name.trim(), linkedListId = linkedListId)
+                    existing.copy(
+                        name = name.trim(),
+                        linkedListId = linkedListId,
+                        allowedAppIds = allowedAppIds,
+                        schedule = schedule
+                    )
                 } else {
                     FocusProfile(
                         id = UUID.randomUUID().toString(),
                         name = name.trim(),
-                        linkedListId = linkedListId
+                        linkedListId = linkedListId,
+                        allowedAppIds = allowedAppIds,
+                        schedule = schedule
                     )
                 }
                 focusRepo.save(profile)

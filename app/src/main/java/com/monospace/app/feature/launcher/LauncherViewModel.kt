@@ -80,6 +80,13 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    fun updateShortcutOrder(reordered: List<AppShortcut>) {
+        viewModelScope.launch {
+            val updated = reordered.mapIndexed { i, s -> s.copy(sortOrder = i) }
+            settings.setLauncherShortcuts(updated)
+        }
+    }
+
     fun launchApp(packageName: String) {
         context.packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

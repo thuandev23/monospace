@@ -85,6 +85,7 @@ fun HomeScreen(
     focusViewModel: FocusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val focusUiState by focusViewModel.uiState.collectAsState()
     val timerState by focusViewModel.timerState.collectAsState()
     val blockedPackage by focusViewModel.blockedPackage.collectAsState()
     val hasUsagePermission by focusViewModel.hasUsagePermission.collectAsState()
@@ -146,6 +147,8 @@ fun HomeScreen(
 
         BlockedAppOverlay(
             blockedPackage = blockedPackage,
+            activeProfileName = focusUiState.activeProfile?.name,
+            timerState = timerState,
             onDismiss = focusViewModel::stopFocusAndDeactivate
         )
     }
@@ -428,6 +431,7 @@ private fun SuccessContent(
                 isEditMode = isEditMode,
                 onLaunch = launcherViewModel::launchApp,
                 onRemove = launcherViewModel::removeShortcut,
+                onReorder = launcherViewModel::updateShortcutOrder,
                 onToggleEditMode = launcherViewModel::toggleEditMode,
                 onAddClick = {
                     launcherViewModel.loadInstalledApps()

@@ -1,5 +1,7 @@
 package com.monospace.app.feature.launcher.components
 
+import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +20,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -35,13 +38,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.core.domain.model.AppShortcut
 import com.monospace.app.ui.theme.FocusTheme
+import sh.calvin.reorderable.ReorderableColumn
+import sh.calvin.reorderable.rememberReorderableColumnState
 
 @Composable
 fun LauncherShortcutsSection(
@@ -49,10 +57,37 @@ fun LauncherShortcutsSection(
     isEditMode: Boolean,
     onLaunch: (String) -> Unit,
     onRemove: (String) -> Unit,
+    onReorder: (List<AppShortcut>) -> Unit,
     onToggleEditMode: () -> Unit,
     onAddClick: () -> Unit
 ) {
-    if (shortcuts.isEmpty() && !isEditMode) return
+    if (shortcuts.isEmpty() && !isEditMode) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggleEditMode() }
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = FocusTheme.colors.secondary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "Thêm app shortcut",
+                    style = FocusTheme.typography.caption.copy(
+                        color = FocusTheme.colors.secondary.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                )
+            }
+        }
+        return
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Section header
@@ -92,30 +127,77 @@ fun LauncherShortcutsSection(
 
         Spacer(Modifier.height(4.dp))
 
-        shortcuts.forEach { shortcut ->
-            ShortcutRow(
-                shortcut = shortcut,
-                isEditMode = isEditMode,
-                onLaunch = { onLaunch(shortcut.packageName) },
-                onRemove = { onRemove(shortcut.packageName) }
+        if (isEditMode) {
+            val listState = remember { mutableStateOf(shortcuts) }
+            LaunchedEffect(shortcuts) {
+                listState.value = shortcuts
+            }
+            
+            val reorderableState = rememberReorderableColumnState(
+                listState = listState,
+                onSettle = { from, to ->
+                    val newList = listState.value.toMutableList().apply {
+                        add(to, removeAt(from))
+                    }
+                    onReorder(newList)
+                }
             )
+
+            ReorderableColumn(
+                modifier = Modifier.fillMaxWidth(),
+                state = reorderableState
+            ) {
+                listState.value.forEachIndexed { index, shortcut ->
+                    androidx.compose.runtime.key(shortcut.packageName) {
+                        val isDragging = reorderableState.draggingItemKey == shortcut.packageName
+                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(elevation)
+                                .background(if (isDragging) FocusTheme.colors.surface else Color.Transparent)
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.DragIndicator,
+                                contentDescription = null,
+                                tint = FocusTheme.colors.divider,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .draggableHandle()
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = shortcut.label,
+                                modifier = Modifier.weight(1f),
+                                style = FocusTheme.typography.body.copy(
+                                    color = FocusTheme.colors.primary,
+                                    fontSize = 22.sp
+                                )
+                            )
+                            IconButton(onClick = { onRemove(shortcut.packageName) }, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Xóa",
+                                    tint = FocusTheme.colors.destructive,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            shortcuts.forEach { shortcut ->
+                ShortcutRow(
+                    shortcut = shortcut,
+                    onLaunch = { onLaunch(shortcut.packageName) }
+                )
+            }
         }
 
-        if (shortcuts.isEmpty() && isEditMode) {
-            Text(
-                text = "Nhấn + để thêm app",
-                style = FocusTheme.typography.caption.copy(
-                    color = FocusTheme.colors.secondary.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-
-        HorizontalDivider(
-            modifier = Modifier.padding(top = 12.dp),
-            color = FocusTheme.colors.divider,
-            thickness = 0.5.dp
-        )
         Spacer(Modifier.height(8.dp))
     }
 }
@@ -123,36 +205,27 @@ fun LauncherShortcutsSection(
 @Composable
 private fun ShortcutRow(
     shortcut: AppShortcut,
-    isEditMode: Boolean,
-    onLaunch: () -> Unit,
-    onRemove: () -> Unit
+    onLaunch: () -> Unit
 ) {
+    val view = LocalView.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !isEditMode, onClick = onLaunch)
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onLaunch()
+            }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = shortcut.label,
             style = FocusTheme.typography.body.copy(
                 color = FocusTheme.colors.primary,
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Normal
             )
         )
-        if (isEditMode) {
-            IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Xóa",
-                    tint = FocusTheme.colors.destructive,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
     }
 }
 

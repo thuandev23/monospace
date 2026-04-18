@@ -62,6 +62,9 @@ class SettingsDataStore @Inject constructor(
         private val KEY_VIEW_SHOW_FOLDER = booleanPreferencesKey("view_show_folder")
         private val KEY_VIEW_SORT_BY = stringPreferencesKey("view_sort_by")
         private val KEY_VIEW_GROUP_BY = stringPreferencesKey("view_group_by")
+
+        // Passcode PIN
+        private val KEY_LOCK_PIN = stringPreferencesKey("lock_pin")
     }
 
     // --- Default List ---
@@ -266,5 +269,16 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setLauncherShortcuts(shortcuts: List<AppShortcut>) {
         context.dataStore.edit { it[KEY_LAUNCHER_SHORTCUTS] = gson.toJson(shortcuts) }
+    }
+
+    // --- Passcode PIN ---
+
+    val lockPin: Flow<String?> = context.dataStore.data.map { it[KEY_LOCK_PIN] }
+
+    suspend fun setLockPin(pin: String?) {
+        context.dataStore.edit { prefs ->
+            if (pin == null) prefs.remove(KEY_LOCK_PIN)
+            else prefs[KEY_LOCK_PIN] = pin
+        }
     }
 }
