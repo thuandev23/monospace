@@ -1,10 +1,17 @@
 package com.monospace.app.feature.focus
 
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.MainActivity
+import com.monospace.app.MonospaceApp.Companion.CHANNEL_REMINDER
+import com.monospace.app.R
 import com.monospace.app.core.domain.model.AppInfo
 import com.monospace.app.core.domain.model.DetoxStats
 import com.monospace.app.core.domain.model.FocusProfile
@@ -17,6 +24,7 @@ import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.service.AppBlockingService
 import com.monospace.app.core.service.AppBlockingState
 import com.monospace.app.core.sync.FocusScheduleEnforcer
+import com.monospace.app.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -232,6 +240,7 @@ class FocusViewModel @Inject constructor(
         if (state.isRunning) return
         _timerState.update { it.copy(isRunning = true, isFinished = false, remainingSeconds = it.durationMinutes * 60L) }
         timerJob = viewModelScope.launch {
+            WidgetUpdater.updateAll(context)
             while (_timerState.value.remainingSeconds > 0) {
                 delay(1000L)
                 _timerState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
@@ -241,6 +250,8 @@ class FocusViewModel @Inject constructor(
             val durationMinutes = _timerState.value.durationMinutes
             val profileId = uiState.value.activeProfile?.id
             sessionRepo.recordSession(durationMinutes, profileId)
+            sendSessionCompleteNotification()
+            WidgetUpdater.updateAll(context)
         }
         val activeProfile = uiState.value.activeProfile
         if (activeProfile != null && activeProfile.allowedAppIds.isNotEmpty() && checkUsagePermission()) {
@@ -255,11 +266,35 @@ class FocusViewModel @Inject constructor(
             it.copy(isRunning = false, isFinished = false, remainingSeconds = it.durationMinutes * 60L)
         }
         AppBlockingService.stop(context)
+        viewModelScope.launch { WidgetUpdater.updateAll(context) }
     }
 
     fun stopFocusAndDeactivate() {
         stopFocus()
         deactivate()
+    }
+
+    private fun sendSessionCompleteNotification() {
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0xF0C05,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDER)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Session hoàn thành! +1 streak 🔥")
+            .setContentText("Tốt lắm! Hãy nghỉ ngơi một chút.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+        val nm = context.getSystemService(NotificationManager::class.java)
+        nm.notify(0xF0C05, notification)
     }
 
     fun deleteProfile(id: String) {

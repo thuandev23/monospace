@@ -104,6 +104,7 @@ fun SettingsScreen(
     val savedOrder by viewModel.sidebarItemOrder.collectAsState()
     val savedHidden by viewModel.sidebarHiddenItems.collectAsState()
     val dbFolders by viewModel.folders.collectAsState()
+    val isPro by viewModel.isPro.collectAsState()
 
     // Main Section Items
     var mainItems by remember {
@@ -539,7 +540,7 @@ fun SettingsScreen(
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                onClick = onNavigateToReminders
+                                onClick = if (isPro) onNavigateToReminders else onNavigateToProUpgrade
                             )
                         }
                         if (index < itemsToRender.size - 1) {
@@ -625,7 +626,7 @@ fun SettingsScreen(
                             SettingItem(
                                 icon = item.icon,
                                 title = item.title,
-                                onClick = onNavigateToNotion
+                                onClick = if (isPro) onNavigateToNotion else onNavigateToProUpgrade
                             )
                         }
                         if (index < itemsToRender.size - 1) {
@@ -683,7 +684,7 @@ fun SettingsScreen(
                             )
                         },
                         title = "Wallpapers",
-                        onClick = onNavigateToWallpaper
+                        onClick = if (isPro) onNavigateToWallpaper else onNavigateToProUpgrade
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 56.dp, end = 16.dp),

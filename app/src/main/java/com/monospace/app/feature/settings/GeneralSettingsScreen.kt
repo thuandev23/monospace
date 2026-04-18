@@ -17,27 +17,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,7 +64,9 @@ fun GeneralSettingsScreen(
     viewModel: GeneralSettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
+    val lockPin by viewModel.lockPin.collectAsState()
     val context = LocalContext.current
+    var showPasscodeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = FocusTheme.colors.background,
@@ -172,9 +184,111 @@ fun GeneralSettingsScreen(
                 }
             )
 
+            HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+
+            // ── Passcode PIN ───────────────────────────────────────────────────
+            GeneralRow(
+                label = "Passcode",
+                trailing = {
+                    Text(
+                        if (lockPin != null) "Đã đặt" else "Chưa đặt",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.secondary,
+                            fontSize = 15.sp
+                        )
+                    )
+                },
+                onClick = { showPasscodeDialog = true }
+            )
+
             Spacer(Modifier.height(24.dp))
         }
     }
+
+    if (showPasscodeDialog) {
+        PasscodeDialog(
+            currentPin = lockPin,
+            onDismiss = { showPasscodeDialog = false },
+            onSave = { pin ->
+                viewModel.setLockPin(pin)
+                showPasscodeDialog = false
+            },
+            onClear = {
+                viewModel.setLockPin(null)
+                showPasscodeDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun PasscodeDialog(
+    currentPin: String?,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = FocusTheme.colors.surface,
+        title = {
+            Text(
+                if (currentPin != null) "Đổi Passcode" else "Đặt Passcode",
+                style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Nhập mã PIN 4 chữ số để bảo vệ Focus Mode.",
+                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
+                )
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = {
+                        if (it.length <= 4 && it.all { c -> c.isDigit() }) {
+                            pin = it
+                            error = false
+                        }
+                    },
+                    placeholder = { Text("••••") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    isError = error,
+                    supportingText = if (error) {{ Text("PIN phải đủ 4 chữ số") }} else null,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FocusTheme.colors.primary,
+                        unfocusedBorderColor = FocusTheme.colors.divider,
+                        focusedTextColor = FocusTheme.colors.primary,
+                        unfocusedTextColor = FocusTheme.colors.primary
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (pin.length == 4) onSave(pin) else error = true
+            }) {
+                Text("Lưu", color = FocusTheme.colors.primary)
+            }
+        },
+        dismissButton = {
+            Row {
+                if (currentPin != null) {
+                    TextButton(onClick = onClear) {
+                        Text("Xóa PIN", color = FocusTheme.colors.destructive)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Hủy", color = FocusTheme.colors.secondary)
+                }
+            }
+        }
+    )
 }
 
 @Composable

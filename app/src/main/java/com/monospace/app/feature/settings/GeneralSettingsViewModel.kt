@@ -19,9 +19,18 @@ class GeneralSettingsViewModel @Inject constructor(
     val settings: StateFlow<GeneralSettings> = settingsDataStore.generalSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GeneralSettings())
 
+    val lockPin: StateFlow<String?> = settingsDataStore.lockPin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     fun update(settings: GeneralSettings) {
         viewModelScope.launch {
             settingsDataStore.setGeneralSettings(settings)
+        }
+    }
+
+    fun setLockPin(pin: String?) {
+        viewModelScope.launch {
+            settingsDataStore.setLockPin(pin)
         }
     }
 }

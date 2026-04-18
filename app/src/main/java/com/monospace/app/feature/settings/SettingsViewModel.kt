@@ -2,6 +2,7 @@ package com.monospace.app.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.billing.ProFeatureGate
 import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.TaskList
@@ -17,8 +18,12 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val taskListRepository: TaskListRepository
+    private val taskListRepository: TaskListRepository,
+    private val proFeatureGate: ProFeatureGate
 ) : ViewModel() {
+
+    val isPro: StateFlow<Boolean> = proFeatureGate.isPro
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val sidebarItemOrder: StateFlow<List<String>> = settingsDataStore.sidebarItemOrder
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

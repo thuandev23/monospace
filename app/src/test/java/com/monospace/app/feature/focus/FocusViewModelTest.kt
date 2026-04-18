@@ -2,10 +2,13 @@ package com.monospace.app.feature.focus
 
 import android.content.Context
 import com.monospace.app.core.domain.model.FocusProfile
+import com.monospace.app.core.domain.model.FocusSchedule
 import com.monospace.app.core.domain.model.TaskList
+import com.monospace.app.core.domain.repository.AppRepository
 import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
+import com.monospace.app.core.sync.FocusScheduleEnforcer
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -50,6 +53,10 @@ class FocusViewModelTest {
             com.monospace.app.core.domain.model.DetoxStats()
         )
     }
+    private val scheduleEnforcer: FocusScheduleEnforcer = mockk(relaxed = true)
+    private val appRepo: AppRepository = mockk(relaxed = true) {
+        every { getInstalledApps() } returns emptyList()
+    }
     private val context: Context = mockk(relaxed = true)
 
     private lateinit var viewModel: FocusViewModel
@@ -57,7 +64,7 @@ class FocusViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FocusViewModel(context, focusRepo, taskListRepo, sessionRepo)
+        viewModel = FocusViewModel(context, focusRepo, taskListRepo, sessionRepo, scheduleEnforcer, appRepo)
     }
 
     @After
@@ -199,6 +206,58 @@ class FocusViewModelTest {
 
         assertTrue(errors.any { it is FocusEvent.Error })
         job.cancel()
+    }
+
+    @Test
+    fun saveProfile_new_savesAllowedAppIds() = runTest {
+        val slot = slot<FocusProfile>()
+        coEvery { focusRepo.save(capture(slot)) } returns Unit
+
+        val apps = setOf("com.instagram.android", "com.tiktok.app")
+        viewModel.saveProfile("Deep Work", linkedListId = null, allowedAppIds = apps)
+        advanceUntilIdle()
+
+        assertEquals(apps, slot.captured.allowedAppIds)
+    }
+
+    @Test
+    fun saveProfile_new_savesSchedule() = runTest {
+        val slot = slot<FocusProfile>()
+        coEvery { focusRepo.save(capture(slot)) } returns Unit
+
+        val schedule = FocusSchedule(startHour = 9, startMinute = 0, endHour = 17, endMinute = 0, daysOfWeek = setOf(1, 2, 3, 4, 5))
+        viewModel.saveProfile("Work", linkedListId = null, schedule = schedule)
+        advanceUntilIdle()
+
+        assertEquals(schedule, slot.captured.schedule)
+    }
+
+    @Test
+    fun saveProfile_new_defaultsToEmptyAllowedAppsAndNullSchedule() = runTest {
+        val slot = slot<FocusProfile>()
+        coEvery { focusRepo.save(capture(slot)) } returns Unit
+
+        viewModel.saveProfile("Work", linkedListId = null)
+        advanceUntilIdle()
+
+        assertTrue(slot.captured.allowedAppIds.isEmpty())
+        assertNull(slot.captured.schedule)
+    }
+
+    @Test
+    fun saveProfile_edit_preservesAllowedAppIdsAndSchedule() = runTest {
+        val apps = setOf("com.instagram.android")
+        val schedule = FocusSchedule(9, 0, 17, 0, setOf(1, 2, 3, 4, 5))
+        val existing = profile("fp-1").copy(allowedAppIds = apps, schedule = schedule)
+        val slot = slot<FocusProfile>()
+        coEvery { focusRepo.save(capture(slot)) } returns Unit
+
+        viewModel.showEditSheet(existing)
+        viewModel.saveProfile("Renamed", linkedListId = null, allowedAppIds = apps, schedule = schedule)
+        advanceUntilIdle()
+
+        assertEquals(apps, slot.captured.allowedAppIds)
+        assertEquals(schedule, slot.captured.schedule)
     }
 
     // ─── activateProfile ──────────────────────────────────────────────────────
