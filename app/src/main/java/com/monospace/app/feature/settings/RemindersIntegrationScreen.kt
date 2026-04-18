@@ -1,7 +1,6 @@
 package com.monospace.app.feature.settings
 
 import android.accounts.AccountManager
-import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -22,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,22 +43,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.monospace.app.ui.theme.FocusTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindersIntegrationScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    viewModel: RemindersIntegrationViewModel = hiltViewModel()
 ) {
-    var connectedAccount by remember { mutableStateOf<String?>(null) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var pendingAccountName by remember { mutableStateOf<String?>(null) }
+
+    val consentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // After consent, retry connecting with the same account
+        pendingAccountName?.let { viewModel.connectAccount(it) }
+    }
 
     val accountPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val accountName = result.data
-            ?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+        val accountName = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
         if (accountName != null) {
-            connectedAccount = accountName
+            pendingAccountName = accountName
+            viewModel.connectAccount(accountName)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.consentIntent.collect { intent ->
+            consentLauncher.launch(intent)
         }
     }
 
@@ -91,7 +109,6 @@ fun RemindersIntegrationScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            // Google Tasks icon
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -99,12 +116,7 @@ fun RemindersIntegrationScreen(
                     .background(Color(0xFF4285F4)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Check,
-                    null,
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
+                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(40.dp))
             }
 
             Text(
@@ -116,8 +128,8 @@ fun RemindersIntegrationScreen(
             )
 
             Text(
-                if (connectedAccount != null)
-                    "Syncing tasks with $connectedAccount"
+                if (uiState.connectedAccount != null)
+                    "Syncing tasks with ${uiState.connectedAccount}"
                 else
                     "Connect your Google account to sync tasks with Google Tasks.",
                 style = FocusTheme.typography.body.copy(
@@ -127,7 +139,25 @@ fun RemindersIntegrationScreen(
                 textAlign = TextAlign.Center
             )
 
-            if (connectedAccount != null) {
+            if (uiState.error != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(FocusTheme.colors.surface)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        uiState.error!!,
+                        style = FocusTheme.typography.caption.copy(
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 13.sp
+                        )
+                    )
+                }
+            }
+
+            if (uiState.connectedAccount != null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -145,16 +175,24 @@ fun RemindersIntegrationScreen(
                             )
                         )
                         Text(
-                            connectedAccount!!,
+                            uiState.connectedAccount!!,
                             style = FocusTheme.typography.body.copy(
                                 color = FocusTheme.colors.primary,
                                 fontWeight = FontWeight.Medium
                             )
                         )
+                        if (uiState.lastSynced != null) {
+                            Text(
+                                "Last synced: ${uiState.lastSynced}",
+                                style = FocusTheme.typography.caption.copy(
+                                    color = FocusTheme.colors.secondary,
+                                    fontSize = 12.sp
+                                )
+                            )
+                        }
                     }
                 }
 
-                // Sync options
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -167,13 +205,40 @@ fun RemindersIntegrationScreen(
                     }
                 }
 
-                // Disconnect
+                // Sync now button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(FocusTheme.colors.primary)
+                        .clickable(enabled = !uiState.isSyncing) { viewModel.syncNow() }
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (uiState.isSyncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = FocusTheme.colors.background,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "Sync Now",
+                            style = FocusTheme.typography.label.copy(
+                                color = FocusTheme.colors.background,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(FocusTheme.colors.surface)
-                        .clickable { connectedAccount = null }
+                        .clickable { viewModel.disconnect() }
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -192,10 +257,9 @@ fun RemindersIntegrationScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xFF4285F4))
-                        .clickable {
+                        .clickable(enabled = !uiState.isSyncing) {
                             val intent = AccountManager.newChooseAccountIntent(
-                                null, null,
-                                arrayOf("com.google"),
+                                null, null, arrayOf("com.google"),
                                 null, null, null, null
                             )
                             accountPickerLauncher.launch(intent)
@@ -203,14 +267,22 @@ fun RemindersIntegrationScreen(
                         .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "Sign in with Google",
-                        style = FocusTheme.typography.label.copy(
+                    if (uiState.isSyncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
                             color = Color.White,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
+                            strokeWidth = 2.dp
                         )
-                    )
+                    } else {
+                        Text(
+                            "Sign in with Google",
+                            style = FocusTheme.typography.label.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
                 }
             }
 
@@ -230,17 +302,11 @@ private fun SyncOptionRow(label: String, value: String) {
     ) {
         Text(
             label,
-            style = FocusTheme.typography.body.copy(
-                color = FocusTheme.colors.primary,
-                fontSize = 15.sp
-            )
+            style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary, fontSize = 15.sp)
         )
         Text(
             value,
-            style = FocusTheme.typography.body.copy(
-                color = FocusTheme.colors.secondary,
-                fontSize = 15.sp
-            )
+            style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary, fontSize = 15.sp)
         )
     }
 }

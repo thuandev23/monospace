@@ -79,6 +79,27 @@ fun WallpaperScreen(
             isDark = false,
             primaryColor = Color(0xFFF5F5F5),
             accentColor = Color(0xFFDDDDDD)
+        ),
+        WallpaperOption(
+            id = "deep_navy",
+            label = "Deep Navy",
+            isDark = true,
+            primaryColor = Color(0xFF0A1628),
+            accentColor = Color(0xFF1E3A5F)
+        ),
+        WallpaperOption(
+            id = "warm_paper",
+            label = "Warm Paper",
+            isDark = false,
+            primaryColor = Color(0xFFF7F0E6),
+            accentColor = Color(0xFFDDD5C8)
+        ),
+        WallpaperOption(
+            id = "slate",
+            label = "Slate",
+            isDark = true,
+            primaryColor = Color(0xFF2C3E50),
+            accentColor = Color(0xFF34495E)
         )
     )
 
@@ -138,19 +159,22 @@ fun WallpaperScreen(
                 }
             }
 
-            // Wallpaper options
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                wallpaperOptions.forEach { option ->
-                    val isSelected = selectedWallpaper?.id == option.id
-                    WallpaperCard(
-                        option = option,
-                        isSelected = isSelected,
-                        onClick = { selectedWallpaper = option },
-                        modifier = Modifier.weight(1f)
-                    )
+            // Wallpaper options — 2 per row
+            wallpaperOptions.chunked(2).forEach { rowOptions ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    rowOptions.forEach { option ->
+                        val isSelected = selectedWallpaper?.id == option.id
+                        WallpaperCard(
+                            option = option,
+                            isSelected = isSelected,
+                            onClick = { selectedWallpaper = option },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (rowOptions.size < 2) Spacer(Modifier.weight(1f))
                 }
             }
 
@@ -168,12 +192,13 @@ fun WallpaperScreen(
                             val option = selectedWallpaper ?: return@launch
                             isSaving = true
                             withContext(Dispatchers.IO) {
-                                val bitmap = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
+                                val wm = WallpaperManager.getInstance(context)
+                                val w = wm.desiredMinimumWidth.takeIf { it > 0 } ?: 1080
+                                val h = wm.desiredMinimumHeight.takeIf { it > 0 } ?: 1920
+                                val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                                 bitmap.eraseColor(option.primaryColor.toArgb())
-                                WallpaperManager.getInstance(context).setBitmap(
-                                    bitmap, null, true,
-                                    WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
-                                )
+                                wm.setBitmap(bitmap, null, true,
+                                    WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
                                 bitmap.recycle()
                             }
                             val theme = if (option.isDark) WidgetTheme.DARK else WidgetTheme.LIGHT

@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.monospace.app.BuildConfig
 import com.monospace.app.core.auth.AuthInterceptor
+import com.monospace.app.core.network.api.GoogleTasksApiService
 import com.monospace.app.core.network.api.NotionApiService
 import com.monospace.app.core.network.api.TaskApiService
 import dagger.Module
@@ -57,6 +58,21 @@ object NetworkModule {
     @Singleton
     fun provideTaskApiService(retrofit: Retrofit): TaskApiService {
         return retrofit.create(TaskApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGoogleTasksApiService(): GoogleTasksApiService {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+        return Retrofit.Builder()
+            .baseUrl("https://tasks.googleapis.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GoogleTasksApiService::class.java)
     }
 
     @Provides

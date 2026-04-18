@@ -28,6 +28,7 @@ fun TaskEntity.toDomain(): Task {
             "pending_delete" -> SyncStatus.PENDING_DELETE
             else -> SyncStatus.SYNCED
         },
+        externalSource = this.externalSource,
         startDateTime = this.startDateTime?.let { Instant.ofEpochMilli(it) },
         endDateTime = this.endDateTime?.let { Instant.ofEpochMilli(it) },
         isAllDay = this.isAllDay,
@@ -63,6 +64,7 @@ fun Task.toEntity(): TaskEntity {
             SyncStatus.PENDING_UPDATE -> "pending_update"
             SyncStatus.PENDING_DELETE -> "pending_delete"
         },
+        externalSource = this.externalSource,
         startDateTime = this.startDateTime?.toEpochMilli(),
         endDateTime = this.endDateTime?.toEpochMilli(),
         isAllDay = this.isAllDay,

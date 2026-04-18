@@ -192,6 +192,35 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    // --- Google Tasks Integration ---
+
+    private val KEY_GOOGLE_TASKS_ACCOUNT = stringPreferencesKey("google_tasks_account")
+    private val KEY_GOOGLE_TASKS_LIST_ID = stringPreferencesKey("google_tasks_list_id")
+    private val KEY_GOOGLE_TASKS_LAST_SYNCED = stringPreferencesKey("google_tasks_last_synced")
+
+    val googleTasksAccount: Flow<String?> = context.dataStore.data.map { it[KEY_GOOGLE_TASKS_ACCOUNT] }
+    val googleTasksListId: Flow<String?> = context.dataStore.data.map { it[KEY_GOOGLE_TASKS_LIST_ID] }
+    val googleTasksLastSynced: Flow<String?> = context.dataStore.data.map { it[KEY_GOOGLE_TASKS_LAST_SYNCED] }
+
+    suspend fun setGoogleTasksConnection(account: String, listId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_GOOGLE_TASKS_ACCOUNT] = account
+            prefs[KEY_GOOGLE_TASKS_LIST_ID] = listId
+        }
+    }
+
+    suspend fun setGoogleTasksLastSynced(timestamp: String) {
+        context.dataStore.edit { it[KEY_GOOGLE_TASKS_LAST_SYNCED] = timestamp }
+    }
+
+    suspend fun clearGoogleTasksConnection() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(KEY_GOOGLE_TASKS_ACCOUNT)
+            prefs.remove(KEY_GOOGLE_TASKS_LIST_ID)
+            prefs.remove(KEY_GOOGLE_TASKS_LAST_SYNCED)
+        }
+    }
+
     // --- TabBarSettings ---
 
     val tabBarShowUpcoming: Flow<Boolean> = context.dataStore.data.map { it[booleanPreferencesKey("tab_show_upcoming")] ?: true }

@@ -194,17 +194,20 @@ class NotionIntegrationViewModel @Inject constructor(
             try {
                 when (task.syncStatus) {
                     SyncStatus.PENDING_CREATE -> {
+                        // Only push tasks created locally (no externalSource) to Notion
+                        if (task.externalSource != null) continue
                         val response = notionApiService.createPage(
                             bearerToken = bearer,
                             body = buildCreatePageBody(dbId, task)
                         )
                         if (response.isSuccessful) {
                             val notionId = response.body()!!.id.replace("-", "")
-                            taskRepository.saveTask(task.copy(id = notionId, syncStatus = SyncStatus.SYNCED))
+                            taskRepository.saveTask(task.copy(id = notionId, syncStatus = SyncStatus.SYNCED, externalSource = "notion"))
                             taskRepository.hardDeleteTask(task.id)
                         }
                     }
                     SyncStatus.PENDING_UPDATE -> {
+                        if (task.externalSource != "notion") continue
                         val pageId = task.id.toNotionPageId() ?: continue
                         val response = notionApiService.updatePage(
                             pageId = pageId,
@@ -216,6 +219,7 @@ class NotionIntegrationViewModel @Inject constructor(
                         }
                     }
                     SyncStatus.PENDING_DELETE -> {
+                        if (task.externalSource != "notion") continue
                         val pageId = task.id.toNotionPageId() ?: continue
                         val response = notionApiService.updatePage(
                             pageId = pageId,
@@ -312,6 +316,7 @@ private fun NotionPage.toTask(defaultListId: String): Task? {
         listId = defaultListId,
         status = if (isDone) TaskStatus.DONE else TaskStatus.NOT_DONE,
         startDateTime = startInstant,
-        endDateTime = null
+        endDateTime = null,
+        externalSource = "notion"
     )
 }

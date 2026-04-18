@@ -11,6 +11,7 @@ data class Task(
     val listId: String = "default",
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val priority: Priority = Priority.NONE,
+    val externalSource: String? = null,
 
     // Schedule Data (Timezone aware via Instant)
     val startDateTime: Instant?,
