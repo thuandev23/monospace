@@ -22,6 +22,12 @@ class FocusProfileRepositoryImpl @Inject constructor(
     override fun observeActive(): Flow<FocusProfile?> =
         dao.observeActive().map { it?.toDomain() }
 
+    override suspend fun getById(id: String): FocusProfile? =
+        dao.getById(id)?.toDomain()
+
+    override suspend fun getAll(): List<FocusProfile> =
+        dao.getAll().map { it.toDomain() }
+
     override suspend fun save(profile: FocusProfile) =
         dao.upsert(profile.toEntity())
 

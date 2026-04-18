@@ -51,6 +51,15 @@
         </receiver>
 
         <receiver
+            android:name=".core.receiver.FocusScheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.monospace.app.FOCUS_SCHEDULE_START" />
+                <action android:name="com.monospace.app.FOCUS_SCHEDULE_STOP" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".widget.TaskListWidgetReceiver"
             android:exported="true"
             android:label="@string/widget_task_list_description">

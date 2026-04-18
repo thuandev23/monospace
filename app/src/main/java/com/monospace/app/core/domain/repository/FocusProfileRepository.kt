@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface FocusProfileRepository {
     fun observeAll(): Flow<List<FocusProfile>>
     fun observeActive(): Flow<FocusProfile?>
+    suspend fun getById(id: String): FocusProfile?
+    suspend fun getAll(): List<FocusProfile>
     suspend fun save(profile: FocusProfile)
     suspend fun delete(id: String)
     suspend fun activate(id: String)

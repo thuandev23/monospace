@@ -2,7 +2,6 @@ package com.monospace.app.feature.settings
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,9 +26,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,9 +48,10 @@ fun AboutScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var showWhatsNew by remember { mutableStateOf(false) }
 
     val aboutItems = listOf(
-        AboutItem("What's New") { /* open whats new */ },
+        AboutItem("What's New") { showWhatsNew = true },
         AboutItem("Help & Feedback") {
             val intent = Intent(Intent.ACTION_SENDTO).apply {
                 data = Uri.parse("mailto:support@monospace.app")
@@ -73,6 +79,10 @@ fun AboutScreen(
             context.startActivity(intent)
         }
     )
+
+    if (showWhatsNew) {
+        WhatsNewDialog(onDismiss = { showWhatsNew = false })
+    }
 
     Scaffold(
         containerColor = FocusTheme.colors.background,
@@ -161,3 +171,82 @@ fun AboutScreen(
 }
 
 private data class AboutItem(val label: String, val onClick: () -> Unit)
+
+private data class ChangelogEntry(val version: String, val changes: List<String>)
+
+private val CHANGELOG = listOf(
+    ChangelogEntry(
+        version = "1.0.0",
+        changes = listOf(
+            "Focus schedule auto-enforcement — set a recurring window and Focus activates automatically",
+            "App blocking during focus sessions with allowed-app whitelist",
+            "Notion two-way sync with full pagination support",
+            "Google Tasks integration with OAuth account picker",
+            "Home screen widgets with custom wallpaper themes",
+            "Detox statistics — daily screen-time and focus session tracking",
+            "Focus profiles with linked task lists and schedules",
+            "Reminder notifications that survive device reboot",
+        )
+    )
+)
+
+@Composable
+private fun WhatsNewDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = FocusTheme.colors.surface,
+        title = {
+            Text(
+                "What's New",
+                style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CHANGELOG.forEach { entry ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "Version ${entry.version}",
+                            style = FocusTheme.typography.body.copy(
+                                color = FocusTheme.colors.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                        )
+                        entry.changes.forEach { change ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "•",
+                                    style = FocusTheme.typography.body.copy(
+                                        color = FocusTheme.colors.secondary,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                                Text(
+                                    change,
+                                    style = FocusTheme.typography.body.copy(
+                                        color = FocusTheme.colors.secondary,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    "Got it",
+                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)
+                )
+            }
+        }
+    )
+}

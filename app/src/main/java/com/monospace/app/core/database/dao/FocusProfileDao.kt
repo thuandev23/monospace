@@ -19,6 +19,9 @@ interface FocusProfileDao {
     @Query("SELECT * FROM focus_profiles WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): FocusProfileEntity?
 
+    @Query("SELECT * FROM focus_profiles")
+    suspend fun getAll(): List<FocusProfileEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(profile: FocusProfileEntity)
 

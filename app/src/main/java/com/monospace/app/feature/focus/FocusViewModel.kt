@@ -7,12 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.domain.model.DetoxStats
 import com.monospace.app.core.domain.model.FocusProfile
+import com.monospace.app.core.domain.model.FocusSchedule
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.service.AppBlockingService
 import com.monospace.app.core.service.AppBlockingState
+import com.monospace.app.core.sync.FocusScheduleEnforcer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -60,7 +62,8 @@ class FocusViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val focusRepo: FocusProfileRepository,
     private val taskListRepo: TaskListRepository,
-    private val sessionRepo: FocusSessionRepository
+    private val sessionRepo: FocusSessionRepository,
+    private val scheduleEnforcer: FocusScheduleEnforcer
 ) : ViewModel() {
 
     private val _showCreateSheet = MutableStateFlow(false)
@@ -153,9 +156,23 @@ class FocusViewModel @Inject constructor(
                     )
                 }
                 focusRepo.save(profile)
+                scheduleEnforcer.scheduleProfile(profile.id, profile.schedule)
                 dismissSheet()
             } catch (e: Exception) {
                 _events.emit(FocusEvent.Error("Không thể lưu: ${e.message}"))
+            }
+        }
+    }
+
+    fun setProfileSchedule(profileId: String, schedule: FocusSchedule?) {
+        viewModelScope.launch {
+            try {
+                val profile = focusRepo.getById(profileId) ?: return@launch
+                val updated = profile.copy(schedule = schedule)
+                focusRepo.save(updated)
+                scheduleEnforcer.scheduleProfile(profileId, schedule)
+            } catch (e: Exception) {
+                _events.emit(FocusEvent.Error("Không thể cập nhật lịch: ${e.message}"))
             }
         }
     }
@@ -231,6 +248,7 @@ class FocusViewModel @Inject constructor(
     fun deleteProfile(id: String) {
         viewModelScope.launch {
             try {
+                scheduleEnforcer.cancelProfile(id)
                 focusRepo.delete(id)
             } catch (e: Exception) {
                 _events.emit(FocusEvent.Error("Không thể xóa: ${e.message}"))

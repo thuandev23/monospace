@@ -1,6 +1,7 @@
 package com.monospace.app.feature.settings
 
 import android.util.Base64
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.BuildConfig
@@ -239,7 +240,10 @@ class NotionIntegrationViewModel @Inject constructor(
     }
 
     private fun String.toNotionPageId(): String? {
-        if (length != 32 || !all { it.isLetterOrDigit() }) return null
+        if (length != 32 || !all { it.isLetterOrDigit() }) {
+            Log.w(TAG, "Unexpected Notion task ID format (len=$length): $this")
+            return null
+        }
         return "${substring(0, 8)}-${substring(8, 12)}-${substring(12, 16)}-${substring(16, 20)}-${substring(20)}"
     }
 
@@ -279,6 +283,7 @@ class NotionIntegrationViewModel @Inject constructor(
     fun clearError() { _error.value = null }
 
     companion object {
+        private const val TAG = "NotionSync"
         val NOTION_CLIENT_ID get() = BuildConfig.NOTION_CLIENT_ID
         val NOTION_CLIENT_SECRET get() = BuildConfig.NOTION_CLIENT_SECRET
         const val NOTION_REDIRECT_URI = "monospace://notion-auth"
