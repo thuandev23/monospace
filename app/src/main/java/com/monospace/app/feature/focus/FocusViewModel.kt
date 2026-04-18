@@ -1,12 +1,15 @@
 package com.monospace.app.feature.focus
 
+import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Process
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.MainActivity
@@ -98,21 +101,41 @@ class FocusViewModel @Inject constructor(
     private val _hasUsagePermission = MutableStateFlow(checkUsagePermission())
     val hasUsagePermission: StateFlow<Boolean> = _hasUsagePermission.asStateFlow()
 
-    fun refreshUsagePermission() {
+    private val _hasOverlayPermission = MutableStateFlow(checkOverlayPermission())
+    val hasOverlayPermission: StateFlow<Boolean> = _hasOverlayPermission.asStateFlow()
+
+    fun refreshPermissions() {
         _hasUsagePermission.value = checkUsagePermission()
+        _hasOverlayPermission.value = checkOverlayPermission()
+        android.util.Log.d("BLOCK_DEBUG", "refreshPermissions: usage=${_hasUsagePermission.value}, overlay=${_hasOverlayPermission.value}")
     }
 
     private fun checkUsagePermission(): Boolean {
-        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return false
-        val now = System.currentTimeMillis()
-        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 10_000, now)
-        return stats != null && stats.isNotEmpty()
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
+        }
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun checkOverlayPermission(): Boolean {
+        return Settings.canDrawOverlays(context)
     }
 
     fun openUsageSettings() {
-        val intent = android.content.Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    fun openOverlaySettings() {
+        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            data = "package:${context.packageName}".toUri()
         }
         context.startActivity(intent)
     }
@@ -205,7 +228,16 @@ class FocusViewModel @Inject constructor(
     fun activateProfile(id: String) {
         viewModelScope.launch {
             try {
+                AppBlockingState.reset()
                 focusRepo.activate(id)
+                val profile = focusRepo.getById(id)
+                if (profile != null && profile.allowedAppIds.isNotEmpty()) {
+                    if (checkUsagePermission()) {
+                        AppBlockingService.start(context)
+                    } else {
+                        _events.emit(FocusEvent.Error(context.getString(R.string.error_usage_permission_required)))
+                    }
+                }
             } catch (e: Exception) {
                 _events.emit(FocusEvent.Error("Không thể kích hoạt: ${e.message}"))
             }
@@ -216,6 +248,8 @@ class FocusViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 focusRepo.deactivate()
+                AppBlockingService.stop(context)
+                AppBlockingState.reset()
             } catch (e: Exception) {
                 _events.emit(FocusEvent.Error("Không thể tắt: ${e.message}"))
             }
@@ -224,9 +258,9 @@ class FocusViewModel @Inject constructor(
 
     // ── Timer functions ───────────────────────────────────────────────────────
 
-    fun setFocusMode(mode: FocusMode) {
+    fun setFocusMode(focusMode: FocusMode) {
         if (_timerState.value.isRunning) return
-        _timerState.update { it.copy(mode = mode) }
+        _timerState.update { it.copy(mode = focusMode) }
     }
 
     fun adjustDuration(deltaMinutes: Int) {
@@ -238,6 +272,7 @@ class FocusViewModel @Inject constructor(
     fun startFocus() {
         val state = _timerState.value
         if (state.isRunning) return
+        AppBlockingState.reset()
         _timerState.update { it.copy(isRunning = true, isFinished = false, remainingSeconds = it.durationMinutes * 60L) }
         timerJob = viewModelScope.launch {
             WidgetUpdater.updateAll(context)
@@ -247,6 +282,7 @@ class FocusViewModel @Inject constructor(
             }
             _timerState.update { it.copy(isRunning = false, isFinished = true) }
             AppBlockingService.stop(context)
+            AppBlockingState.reset()
             val durationMinutes = _timerState.value.durationMinutes
             val profileId = uiState.value.activeProfile?.id
             sessionRepo.recordSession(durationMinutes, profileId)
@@ -266,6 +302,7 @@ class FocusViewModel @Inject constructor(
             it.copy(isRunning = false, isFinished = false, remainingSeconds = it.durationMinutes * 60L)
         }
         AppBlockingService.stop(context)
+        AppBlockingState.reset()
         viewModelScope.launch { WidgetUpdater.updateAll(context) }
     }
 

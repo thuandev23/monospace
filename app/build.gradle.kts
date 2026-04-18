@@ -129,6 +129,9 @@ dependencies {
 
     // Google Play Billing
     implementation(libs.billing)
+
+    // Drag-to-reorder
+    implementation(libs.reorderable)
     
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

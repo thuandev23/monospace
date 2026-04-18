@@ -46,7 +46,7 @@ class MonospaceApp : Application(), Configuration.Provider {
                 enableVibration(true)
             }
 
-            // Channel cho sync status (ít ưu tiên hơn)
+            // Channel cho sync status
             val syncChannel = NotificationChannel(
                 CHANNEL_SYNC,
                 "Đồng bộ dữ liệu",
@@ -55,12 +55,15 @@ class MonospaceApp : Application(), Configuration.Provider {
                 description = "Trạng thái đồng bộ với server"
             }
 
+            // Channel cho Focus Mode - Bắt buộc HIGH để chặn app hoạt động
             val focusChannel = NotificationChannel(
                 CHANNEL_FOCUS,
                 "Focus Mode",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Thông báo khi Focus Mode đang chạy"
+                description = "Thông báo khi Focus Mode đang chạy và chặn ứng dụng"
+                enableVibration(false)
+                setSound(null, null)
             }
 
             manager.createNotificationChannels(listOf(reminderChannel, syncChannel, focusChannel))

@@ -123,4 +123,16 @@
     <string name="content_desc_options">Tuỳ chọn</string>
     <string name="widget_task_list_description">Danh sách task hôm nay</string>
     <string name="widget_clock_description">Đồng hồ và ngày tháng</string>
+
+    <!-- Focus & Blocking -->
+    <string name="notif_focus_active_title">Monospace Focus đang bật</string>
+    <string name="notif_focus_active_desc">Đang giám sát sự tập trung của bạn</string>
+    <string name="notif_app_restricted_title">Ứng dụng bị hạn chế!</string>
+    <string name="notif_app_restricted_desc">Bạn có %1$d giây để quay lại trước khi bị chặn.</string>
+    <string name="error_usage_permission_required">Vui lòng cấp quyền Truy cập sử dụng.</string>
+    <string name="permission_banner_usage_title">Quyền chặn ứng dụng</string>
+    <string name="permission_banner_usage_desc">Cần quyền \'Usage Access\' để biết khi nào bạn mở ứng dụng bị chặn.</string>
+    <string name="permission_banner_overlay_title">Quyền hiển thị trên cùng</string>
+    <string name="permission_banner_overlay_desc">Cần quyền này để tự động chặn ứng dụng sau 5 giây cảnh báo.</string>
+    <string name="action_grant_now">Cấp quyền ngay</string>
 </resources>

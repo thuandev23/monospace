@@ -28,6 +28,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.monospace.app.feature.blocking.BlockedAppOverlay
+import com.monospace.app.feature.focus.FocusViewModel
 import com.monospace.app.feature.launcher.components.HomeBottomBar
 import com.monospace.app.feature.onboardings.OnboardingViewModel
 import com.monospace.app.feature.settings.TabBarSettingsViewModel
@@ -70,7 +72,16 @@ fun MainScreen() {
     val tabBarViewModel: TabBarSettingsViewModel = hiltViewModel()
     val tabBarSettings by tabBarViewModel.settings.collectAsState()
 
-    // Wait until onboarding state is loaded, then navigate if needed
+    val focusViewModel: FocusViewModel = hiltViewModel()
+    val blockedPackage by focusViewModel.blockedPackage.collectAsState()
+    val focusUiState by focusViewModel.uiState.collectAsState()
+    val timerState by focusViewModel.timerState.collectAsState()
+
+    // Tự động refresh quyền khi quay lại app
+    LaunchedEffect(Unit) {
+        focusViewModel.refreshPermissions()
+    }
+
     LaunchedEffect(onboardingCompleted) {
         if (onboardingCompleted == false) {
             navController.navigate(Screen.Onboarding.route) {
@@ -88,82 +99,86 @@ fun MainScreen() {
         Screen.Search.route
     )
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (showBottomBar) {
-                Box(
-                    modifier = Modifier.padding(bottom = 24.dp),
-                    contentAlignment = Alignment.Center
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                if (showBottomBar) {
+                    Box(
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HomeBottomBar(
+                            showUpcoming = tabBarSettings.showUpcoming,
+                            showSearch = tabBarSettings.showSearch,
+                            onTodayClick = {
+                                navController.navigate(Screen.Home.BASE) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
+                                        saveState = false
+                                    }
+                                    launchSingleTop = false
+                                }
+                            },
+                            onSearchClick = {
+                                navController.navigate(Screen.Search.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            onUpcomingClick = {
+                                navController.navigate(Screen.Upcoming.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            onSettingsClick = {
+                                navController.navigate(Screen.Settings.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                AnimatedVisibility(
+                    visible = !isOnline,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
                 ) {
-                    HomeBottomBar(
-                        showUpcoming = tabBarSettings.showUpcoming,
-                        showSearch = tabBarSettings.showSearch,
-                        onTodayClick = {
-                            // Today luôn về default list — không restore state từ folder cũ
-                            navController.navigate(Screen.Home.BASE) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    inclusive = true
-                                    saveState = false
-                                }
-                                launchSingleTop = false
-                            }
-                        },
-                        onSearchClick = {
-                            navController.navigate(Screen.Search.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onUpcomingClick = {
-                            navController.navigate(Screen.Upcoming.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        onSettingsClick = {
-                            navController.navigate(Screen.Settings.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                    Text(
+                        text = "Không có kết nối mạng — đang lưu offline",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(FocusTheme.colors.secondary)
+                            .padding(vertical = 6.dp, horizontal = 16.dp),
+                        style = FocusTheme.typography.label.copy(
+                            color = FocusTheme.colors.background,
+                            textAlign = TextAlign.Center
+                        )
                     )
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    MonospaceNavGraph(navController = navController)
                 }
             }
         }
-    ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            // Offline banner — hiện ở trên cùng khi mất mạng
-            AnimatedVisibility(
-                visible = !isOnline,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                Text(
-                    text = "Không có kết nối mạng — đang lưu offline",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(FocusTheme.colors.secondary)
-                        .padding(vertical = 6.dp, horizontal = 16.dp),
-                    style = FocusTheme.typography.label.copy(
-                        color = FocusTheme.colors.background,
-                        textAlign = TextAlign.Center
-                    )
-                )
-            }
 
-            Box(modifier = Modifier.weight(1f)) {
-                MonospaceNavGraph(navController = navController)
+        // ĐÂY LÀ PHẦN QUAN TRỌNG: Overlay chặn app luôn nằm trên cùng
+        BlockedAppOverlay(
+            blockedPackage = blockedPackage,
+            activeProfileName = focusUiState.activeProfile?.name,
+            timerState = timerState,
+            onDismiss = {
+                focusViewModel.stopFocusAndDeactivate()
             }
-        }
+        )
     }
 }

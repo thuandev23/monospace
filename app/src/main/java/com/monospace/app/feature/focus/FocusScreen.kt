@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,6 +73,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.monospace.app.core.domain.model.AppInfo
 import com.monospace.app.core.domain.model.DetoxBadge
 import com.monospace.app.core.domain.model.DetoxStats
@@ -90,6 +93,7 @@ fun FocusScreen(
     val uiState by viewModel.uiState.collectAsState()
     val detoxStats by viewModel.detoxStats.collectAsState()
     val hasUsagePermission by viewModel.hasUsagePermission.collectAsState()
+    val hasOverlayPermission by viewModel.hasOverlayPermission.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -98,6 +102,10 @@ fun FocusScreen(
                 is FocusEvent.Error -> snackbarHostState.showSnackbar(event.message)
             }
         }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshPermissions()
     }
 
     Scaffold(
@@ -141,7 +149,11 @@ fun FocusScreen(
         floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         if (uiState.isLoading) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding), contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(color = FocusTheme.colors.primary)
             }
         } else {
@@ -149,6 +161,7 @@ fun FocusScreen(
                 uiState = uiState,
                 detoxStats = detoxStats,
                 hasUsagePermission = hasUsagePermission,
+                hasOverlayPermission = hasOverlayPermission,
                 modifier = Modifier.padding(padding),
                 onActivate = viewModel::activateProfile,
                 onDeactivate = viewModel::deactivate,
@@ -156,7 +169,8 @@ fun FocusScreen(
                 onDelete = viewModel::deleteProfile,
                 onViewDetoxStats = onNavigateToDetoxStats,
                 onOpenUsageSettings = viewModel::openUsageSettings,
-                onRefreshUsagePermission = viewModel::refreshUsagePermission
+                onOpenOverlaySettings = viewModel::openOverlaySettings,
+                onRefreshUsagePermission = viewModel::refreshPermissions
             )
         }
     }
@@ -179,6 +193,7 @@ private fun FocusContent(
     uiState: FocusUiState,
     detoxStats: DetoxStats = DetoxStats(),
     hasUsagePermission: Boolean = true,
+    hasOverlayPermission: Boolean = true,
     modifier: Modifier = Modifier,
     onActivate: (String) -> Unit,
     onDeactivate: () -> Unit,
@@ -186,6 +201,7 @@ private fun FocusContent(
     onDelete: (String) -> Unit,
     onViewDetoxStats: () -> Unit = {},
     onOpenUsageSettings: () -> Unit = {},
+    onOpenOverlaySettings: () -> Unit = {},
     onRefreshUsagePermission: () -> Unit = {}
 ) {
     LazyColumn(
@@ -198,12 +214,25 @@ private fun FocusContent(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Usage Permission onboarding banner
+        // Usage Permission banner
         if (!hasUsagePermission && uiState.profiles.isNotEmpty()) {
             item {
                 UsagePermissionBanner(
                     onGrant = {
                         onOpenUsageSettings()
+                        onRefreshUsagePermission()
+                    }
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+
+        // Overlay Permission banner — bắt buộc để auto-jump hoạt động
+        if (!hasOverlayPermission && uiState.profiles.isNotEmpty()) {
+            item {
+                OverlayPermissionBanner(
+                    onGrant = {
+                        onOpenOverlaySettings()
                         onRefreshUsagePermission()
                     }
                 )
@@ -281,7 +310,12 @@ private fun UsagePermissionBanner(onGrant: () -> Unit) {
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Security, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Default.Security,
+                null,
+                tint = FocusTheme.colors.primary,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(Modifier.width(8.dp))
             Text(
                 "Quyền chặn ứng dụng",
@@ -291,7 +325,10 @@ private fun UsagePermissionBanner(onGrant: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(
             "Cần quyền 'Usage Access' để có thể chặn các ứng dụng gây xao nhãng trong Focus Mode.",
-            style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary, fontSize = 13.sp)
+            style = FocusTheme.typography.body.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 13.sp
+            )
         )
         Spacer(Modifier.height(12.dp))
         Button(
@@ -300,7 +337,55 @@ private fun UsagePermissionBanner(onGrant: () -> Unit) {
             shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Text("Cấp quyền ngay", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.background))
+            Text(
+                "Cấp quyền ngay",
+                style = FocusTheme.typography.label.copy(color = FocusTheme.colors.background)
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverlayPermissionBanner(onGrant: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(FocusTheme.colors.surface)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.Security,
+                null,
+                tint = FocusTheme.colors.destructive,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Quyền hiển thị trên cùng",
+                style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.destructive)
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Cần quyền 'Xuất hiện trên cùng' để tự động nhảy về Monospace khi hết đếm ngược. Không có quyền này, màn hình chặn sẽ không hiện.",
+            style = FocusTheme.typography.body.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 13.sp
+            )
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(
+            onClick = onGrant,
+            colors = ButtonDefaults.buttonColors(containerColor = FocusTheme.colors.destructive),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                "Cấp quyền ngay",
+                style = FocusTheme.typography.label.copy(color = FocusTheme.colors.background)
+            )
         }
     }
 }
@@ -369,7 +454,12 @@ private fun ProfileCard(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Xóa profile?", color = FocusTheme.colors.primary) },
-            text = { Text("Profile \"${profile.name}\" sẽ bị xóa vĩnh viễn.", color = FocusTheme.colors.secondary) },
+            text = {
+                Text(
+                    "Profile \"${profile.name}\" sẽ bị xóa vĩnh viễn.",
+                    color = FocusTheme.colors.secondary
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
                     Text("Xóa", color = FocusTheme.colors.destructive)
@@ -437,7 +527,7 @@ private fun ProfileCard(
                     fontWeight = FontWeight.Medium
                 )
             )
-            
+
             val subtitle = buildString {
                 if (linkedListName != null) append(linkedListName)
                 if (profile.allowedAppIds.isNotEmpty()) {
@@ -448,7 +538,7 @@ private fun ProfileCard(
                     append("Không giới hạn")
                 }
             }
-            
+
             Text(
                 subtitle,
                 style = FocusTheme.typography.caption.copy(
@@ -459,7 +549,12 @@ private fun ProfileCard(
 
             profile.schedule?.let { sch ->
                 val dayStr = formatDaysRange(sch.daysOfWeek)
-                val time = "%02d:%02d–%02d:%02d".format(sch.startHour, sch.startMinute, sch.endHour, sch.endMinute)
+                val time = "%02d:%02d–%02d:%02d".format(
+                    sch.startHour,
+                    sch.startMinute,
+                    sch.endHour,
+                    sch.endMinute
+                )
                 Text(
                     "$dayStr · $time",
                     style = FocusTheme.typography.caption.copy(
@@ -511,7 +606,12 @@ private fun ProfileCard(
                 DropdownMenuItem(
                     text = { Text("Chỉnh sửa", color = FocusTheme.colors.primary) },
                     leadingIcon = {
-                        Icon(Icons.Default.Edit, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Edit,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
                     },
                     onClick = { showMenu = false; onEdit() }
                 )
@@ -519,7 +619,12 @@ private fun ProfileCard(
                 DropdownMenuItem(
                     text = { Text("Xóa", color = FocusTheme.colors.destructive) },
                     leadingIcon = {
-                        Icon(Icons.Default.Delete, null, tint = FocusTheme.colors.destructive, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Delete,
+                            null,
+                            tint = FocusTheme.colors.destructive,
+                            modifier = Modifier.size(16.dp)
+                        )
                     },
                     onClick = { showMenu = false; showDeleteDialog = true }
                 )
@@ -533,9 +638,10 @@ private fun formatDaysRange(days: Set<Int>): String {
     if (days.size == 7) return "Mỗi ngày"
     val sorted = days.sorted()
     val isRange = sorted.size > 1 && sorted.last() - sorted.first() == sorted.size - 1
-    
-    val dayLabels = mapOf(1 to "T2", 2 to "T3", 3 to "T4", 4 to "T5", 5 to "T6", 6 to "T7", 7 to "CN")
-    
+
+    val dayLabels =
+        mapOf(1 to "T2", 2 to "T3", 3 to "T4", 4 to "T5", 5 to "T6", 6 to "T7", 7 to "CN")
+
     return if (isRange && sorted.size >= 3) {
         "${dayLabels[sorted.first()]}-${dayLabels[sorted.last()]}"
     } else {
@@ -556,20 +662,36 @@ private fun ProfileSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showPermissionSheet by remember { mutableStateOf(false) }
-    
+
     var name by remember(editingProfile?.id) { mutableStateOf(editingProfile?.name ?: "") }
     var selectedListId by remember(editingProfile?.id) { mutableStateOf(editingProfile?.linkedListId) }
-    var selectedApps by remember(editingProfile?.id) { 
-        mutableStateOf(editingProfile?.allowedAppIds ?: emptySet()) 
+    var selectedApps by remember(editingProfile?.id) {
+        mutableStateOf(editingProfile?.allowedAppIds ?: emptySet())
     }
-    
+
     var scheduleEnabled by remember(editingProfile?.id) { mutableStateOf(editingProfile?.schedule != null) }
-    var startHour by remember(editingProfile?.id) { mutableIntStateOf(editingProfile?.schedule?.startHour ?: 9) }
-    var startMinute by remember(editingProfile?.id) { mutableIntStateOf(editingProfile?.schedule?.startMinute ?: 0) }
-    var endHour by remember(editingProfile?.id) { mutableIntStateOf(editingProfile?.schedule?.endHour ?: 17) }
-    var endMinute by remember(editingProfile?.id) { mutableIntStateOf(editingProfile?.schedule?.endMinute ?: 0) }
-    var selectedDays by remember(editingProfile?.id) { 
-        mutableStateOf(editingProfile?.schedule?.daysOfWeek ?: setOf(1, 2, 3, 4, 5)) 
+    var startHour by remember(editingProfile?.id) {
+        mutableIntStateOf(
+            editingProfile?.schedule?.startHour ?: 9
+        )
+    }
+    var startMinute by remember(editingProfile?.id) {
+        mutableIntStateOf(
+            editingProfile?.schedule?.startMinute ?: 0
+        )
+    }
+    var endHour by remember(editingProfile?.id) {
+        mutableIntStateOf(
+            editingProfile?.schedule?.endHour ?: 17
+        )
+    }
+    var endMinute by remember(editingProfile?.id) {
+        mutableIntStateOf(
+            editingProfile?.schedule?.endMinute ?: 0
+        )
+    }
+    var selectedDays by remember(editingProfile?.id) {
+        mutableStateOf(editingProfile?.schedule?.daysOfWeek ?: setOf(1, 2, 3, 4, 5))
     }
 
     var showListMenu by remember { mutableStateOf(false) }
@@ -598,16 +720,32 @@ private fun ProfileSheet(
             Spacer(Modifier.height(20.dp))
 
             // Name field
-            Text("Tên", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 12.sp))
+            Text(
+                "Tên",
+                style = FocusTheme.typography.label.copy(
+                    color = FocusTheme.colors.secondary,
+                    fontSize = 12.sp
+                )
+            )
             Spacer(Modifier.height(6.dp))
             BasicTextField(
                 value = name,
                 onValueChange = { name = it },
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(FocusTheme.colors.background).border(1.dp, FocusTheme.colors.divider, RoundedCornerShape(10.dp)).padding(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(FocusTheme.colors.background)
+                    .border(1.dp, FocusTheme.colors.divider, RoundedCornerShape(10.dp))
+                    .padding(12.dp),
                 textStyle = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary),
                 singleLine = true,
                 decorationBox = { inner ->
-                    if (name.isEmpty()) Text("VD: Deep Work, Study...", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary.copy(alpha = 0.5f)))
+                    if (name.isEmpty()) Text(
+                        "VD: Deep Work, Study...",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.secondary.copy(alpha = 0.5f)
+                        )
+                    )
                     inner()
                 }
             )
@@ -615,23 +753,61 @@ private fun ProfileSheet(
             Spacer(Modifier.height(16.dp))
 
             // Linked list picker
-            Text("Gắn với danh sách task", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 12.sp))
+            Text(
+                "Gắn với danh sách task",
+                style = FocusTheme.typography.label.copy(
+                    color = FocusTheme.colors.secondary,
+                    fontSize = 12.sp
+                )
+            )
             Spacer(Modifier.height(6.dp))
             Box {
                 Row(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(FocusTheme.colors.background).border(1.dp, FocusTheme.colors.divider, RoundedCornerShape(10.dp)).padding(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FocusTheme.colors.background)
+                        .border(1.dp, FocusTheme.colors.divider, RoundedCornerShape(10.dp))
+                        .padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(availableLists.find { it.id == selectedListId }?.name ?: "Không gắn", style = FocusTheme.typography.body.copy(color = if (selectedListId != null) FocusTheme.colors.primary else FocusTheme.colors.secondary.copy(alpha = 0.5f)))
-                    TextButton(onClick = { showListMenu = true }, contentPadding = PaddingValues(0.dp)) {
-                        Text("Chọn", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.primary))
+                    Text(
+                        availableLists.find { it.id == selectedListId }?.name ?: "Không gắn",
+                        style = FocusTheme.typography.body.copy(
+                            color = if (selectedListId != null) FocusTheme.colors.primary else FocusTheme.colors.secondary.copy(
+                                alpha = 0.5f
+                            )
+                        )
+                    )
+                    TextButton(
+                        onClick = { showListMenu = true },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            "Chọn",
+                            style = FocusTheme.typography.label.copy(color = FocusTheme.colors.primary)
+                        )
                     }
                 }
-                DropdownMenu(expanded = showListMenu, onDismissRequest = { showListMenu = false }, modifier = Modifier.background(FocusTheme.colors.surface)) {
-                    DropdownMenuItem(text = { Text("Không gắn", color = FocusTheme.colors.secondary) }, onClick = { selectedListId = null; showListMenu = false })
+                DropdownMenu(
+                    expanded = showListMenu,
+                    onDismissRequest = { showListMenu = false },
+                    modifier = Modifier.background(FocusTheme.colors.surface)
+                ) {
+                    DropdownMenuItem(text = {
+                        Text(
+                            "Không gắn",
+                            color = FocusTheme.colors.secondary
+                        )
+                    }, onClick = { selectedListId = null; showListMenu = false })
                     availableLists.forEach { list ->
-                        DropdownMenuItem(text = { Text(list.name, color = FocusTheme.colors.primary) }, onClick = { selectedListId = list.id; showListMenu = false })
+                        DropdownMenuItem(text = {
+                            Text(
+                                list.name,
+                                color = FocusTheme.colors.primary
+                            )
+                        }, onClick = { selectedListId = list.id; showListMenu = false })
                     }
                 }
             }
@@ -639,18 +815,38 @@ private fun ProfileSheet(
             Spacer(Modifier.height(16.dp))
 
             // Section: Apps bị chặn
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Apps bị chặn", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 12.sp))
-                TextButton(onClick = { showAppPicker = true }, contentPadding = PaddingValues(0.dp)) {
-                    Text("+ Thêm app", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.primary))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Apps bị chặn",
+                    style = FocusTheme.typography.label.copy(
+                        color = FocusTheme.colors.secondary,
+                        fontSize = 12.sp
+                    )
+                )
+                TextButton(
+                    onClick = { showAppPicker = true },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        "+ Thêm app",
+                        style = FocusTheme.typography.label.copy(color = FocusTheme.colors.primary)
+                    )
                 }
             }
             Spacer(Modifier.height(4.dp))
-            
+
             if (selectedApps.isEmpty()) {
                 Text(
                     "Không giới hạn apps",
-                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary.copy(alpha = 0.5f)),
+                    style = FocusTheme.typography.body.copy(
+                        color = FocusTheme.colors.secondary.copy(
+                            alpha = 0.5f
+                        )
+                    ),
                     modifier = Modifier.padding(start = 4.dp)
                 )
             } else {
@@ -668,12 +864,17 @@ private fun ProfileSheet(
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(appName, style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.primary))
+                            Text(
+                                appName,
+                                style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.primary)
+                            )
                             Spacer(Modifier.width(6.dp))
                             Icon(
                                 Icons.Default.Close,
                                 null,
-                                modifier = Modifier.size(14.dp).clickable { selectedApps = selectedApps - pkg },
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clickable { selectedApps = selectedApps - pkg },
                                 tint = FocusTheme.colors.secondary
                             )
                         }
@@ -684,39 +885,98 @@ private fun ProfileSheet(
             Spacer(Modifier.height(20.dp))
 
             // Section: Lịch tự động
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Bật lịch tự động", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 12.sp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Bật lịch tự động",
+                    style = FocusTheme.typography.label.copy(
+                        color = FocusTheme.colors.secondary,
+                        fontSize = 12.sp
+                    )
+                )
                 Switch(
                     checked = scheduleEnabled,
                     onCheckedChange = { scheduleEnabled = it },
                     colors = SwitchDefaults.colors(checkedTrackColor = FocusTheme.colors.success)
                 )
             }
-            
+
             if (scheduleEnabled) {
                 Spacer(Modifier.height(16.dp))
-                
-                Text("Bắt đầu", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 11.sp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Picker(items = (0..23).map { "%02d".format(it) }, initialIndex = startHour) { startHour = it.toInt() }
-                    Text(":", modifier = Modifier.padding(horizontal = 8.dp), style = FocusTheme.typography.title)
-                    Picker(items = (0..59).map { "%02d".format(it) }, initialIndex = startMinute) { startMinute = it.toInt() }
+
+                Text(
+                    "Bắt đầu",
+                    style = FocusTheme.typography.label.copy(
+                        color = FocusTheme.colors.secondary,
+                        fontSize = 11.sp
+                    )
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Picker(
+                        items = (0..23).map { "%02d".format(it) },
+                        initialIndex = startHour
+                    ) { startHour = it.toInt() }
+                    Text(
+                        ":",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        style = FocusTheme.typography.title
+                    )
+                    Picker(
+                        items = (0..59).map { "%02d".format(it) },
+                        initialIndex = startMinute
+                    ) { startMinute = it.toInt() }
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                Text("Kết thúc", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 11.sp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Picker(items = (0..23).map { "%02d".format(it) }, initialIndex = endHour) { endHour = it.toInt() }
-                    Text(":", modifier = Modifier.padding(horizontal = 8.dp), style = FocusTheme.typography.title)
-                    Picker(items = (0..59).map { "%02d".format(it) }, initialIndex = endMinute) { endMinute = it.toInt() }
+                Text(
+                    "Kết thúc",
+                    style = FocusTheme.typography.label.copy(
+                        color = FocusTheme.colors.secondary,
+                        fontSize = 11.sp
+                    )
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Picker(
+                        items = (0..23).map { "%02d".format(it) },
+                        initialIndex = endHour
+                    ) { endHour = it.toInt() }
+                    Text(
+                        ":",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        style = FocusTheme.typography.title
+                    )
+                    Picker(
+                        items = (0..59).map { "%02d".format(it) },
+                        initialIndex = endMinute
+                    ) { endMinute = it.toInt() }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                Text("Ngày trong tuần", style = FocusTheme.typography.label.copy(color = FocusTheme.colors.secondary, fontSize = 11.sp))
+                Text(
+                    "Ngày trong tuần",
+                    style = FocusTheme.typography.label.copy(
+                        color = FocusTheme.colors.secondary,
+                        fontSize = 11.sp
+                    )
+                )
                 Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     val dayLabels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
                     (1..7).forEach { day ->
                         val isSelected = day in selectedDays
@@ -725,13 +985,14 @@ private fun ProfileSheet(
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(if (isSelected) FocusTheme.colors.primary else FocusTheme.colors.background)
-                                .clickable { 
-                                    selectedDays = if (isSelected) selectedDays - day else selectedDays + day 
+                                .clickable {
+                                    selectedDays =
+                                        if (isSelected) selectedDays - day else selectedDays + day
                                 },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                dayLabels[day-1],
+                                dayLabels[day - 1],
                                 style = FocusTheme.typography.label.copy(
                                     color = if (isSelected) FocusTheme.colors.background else FocusTheme.colors.secondary,
                                     fontSize = 12.sp
@@ -745,20 +1006,32 @@ private fun ProfileSheet(
             Spacer(Modifier.height(32.dp))
 
             Button(
-                onClick = { 
+                onClick = {
                     if (!hasUsagePermission && selectedApps.isNotEmpty()) {
                         showPermissionSheet = true
                     } else {
-                        val sch = if (scheduleEnabled) FocusSchedule(startHour, startMinute, endHour, endMinute, selectedDays) else null
+                        val sch = if (scheduleEnabled) FocusSchedule(
+                            startHour,
+                            startMinute,
+                            endHour,
+                            endMinute,
+                            selectedDays
+                        ) else null
                         onSave(name, selectedListId, selectedApps, sch)
                     }
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = FocusTheme.colors.primary, disabledContainerColor = FocusTheme.colors.divider),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = FocusTheme.colors.primary,
+                    disabledContainerColor = FocusTheme.colors.divider
+                ),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(if (editingProfile != null) "Lưu thay đổi" else "Tạo Profile", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
+                Text(
+                    if (editingProfile != null) "Lưu thay đổi" else "Tạo Profile",
+                    style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background)
+                )
             }
         }
     }
@@ -788,19 +1061,33 @@ private fun ProfileSheet(
 private fun PermissionExplainerSheet(onDismiss: () -> Unit, onGrant: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = FocusTheme.colors.surface) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp).padding(bottom = 32.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(Icons.Default.Security, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(48.dp))
+            Icon(
+                Icons.Default.Security,
+                null,
+                tint = FocusTheme.colors.primary,
+                modifier = Modifier.size(48.dp)
+            )
             Spacer(Modifier.height(16.dp))
             Text(
                 "Tại sao cần quyền chặn ứng dụng?",
-                style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary, textAlign = TextAlign.Center)
+                style = FocusTheme.typography.title.copy(
+                    color = FocusTheme.colors.primary,
+                    textAlign = TextAlign.Center
+                )
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 "Để tính năng chặn ứng dụng hoạt động, Monospace cần quyền 'Usage Access' từ hệ thống Android. Quyền này cho phép app nhận biết khi nào một ứng dụng gây xao nhãng đang mở để hiển thị màn hình chặn.",
-                style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary, textAlign = TextAlign.Center)
+                style = FocusTheme.typography.body.copy(
+                    color = FocusTheme.colors.secondary,
+                    textAlign = TextAlign.Center
+                )
             )
             Spacer(Modifier.height(32.dp))
             Button(
@@ -809,7 +1096,10 @@ private fun PermissionExplainerSheet(onDismiss: () -> Unit, onGrant: () -> Unit)
                 colors = ButtonDefaults.buttonColors(containerColor = FocusTheme.colors.primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Cấp quyền trong Cài đặt", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
+                Text(
+                    "Cấp quyền trong Cài đặt",
+                    style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background)
+                )
             }
             TextButton(onClick = onDismiss) {
                 Text("Để sau", color = FocusTheme.colors.secondary)
@@ -829,29 +1119,73 @@ private fun AppPickerSheet(
     var selected by remember { mutableStateOf(selectedAppIds) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = FocusTheme.colors.surface) {
-        Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f).padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Chọn apps bị chặn", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary, fontWeight = FontWeight.SemiBold))
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = FocusTheme.colors.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.8f)
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Chọn apps bị chặn",
+                    style = FocusTheme.typography.title.copy(
+                        color = FocusTheme.colors.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
                 IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
             }
-            
-            LazyColumn(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
+
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 12.dp)
+            ) {
                 items(installedApps) { app ->
                     val isChecked = app.packageName in selected
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { if (isChecked) selected -= app.packageName else selected += app.packageName }.padding(vertical = 12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { if (isChecked) selected -= app.packageName else selected += app.packageName }
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(app.name, modifier = Modifier.weight(1f), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
-                        if (isChecked) Icon(Icons.Default.Check, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(20.dp))
+                        Text(
+                            app.name,
+                            modifier = Modifier.weight(1f),
+                            style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)
+                        )
+                        if (isChecked) Icon(
+                            Icons.Default.Check,
+                            null,
+                            tint = FocusTheme.colors.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                     HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
                 }
             }
-            
-            Button(onClick = { onConfirmed(selected); onDismiss() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = FocusTheme.colors.primary), shape = RoundedCornerShape(12.dp)) {
-                Text("Xong", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
+
+            Button(
+                onClick = { onConfirmed(selected); onDismiss() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = FocusTheme.colors.primary),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    "Xong",
+                    style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background)
+                )
             }
         }
     }

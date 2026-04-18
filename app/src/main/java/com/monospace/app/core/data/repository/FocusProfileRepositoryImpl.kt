@@ -1,7 +1,6 @@
 package com.monospace.app.core.data.repository
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.monospace.app.core.database.dao.FocusProfileDao
 import com.monospace.app.core.database.entity.FocusProfileEntity
 import com.monospace.app.core.domain.model.FocusProfile
@@ -20,7 +19,10 @@ class FocusProfileRepositoryImpl @Inject constructor(
         dao.observeAll().map { list -> list.map { it.toDomain() } }
 
     override fun observeActive(): Flow<FocusProfile?> =
-        dao.observeActive().map { it?.toDomain() }
+        dao.observeActive().map { 
+            android.util.Log.d("BLOCK_DEBUG", "Repository.observeActive emission: ${it?.name} (isActive=${it?.isActive})")
+            it?.toDomain() 
+        }
 
     override suspend fun getById(id: String): FocusProfile? =
         dao.getById(id)?.toDomain()
@@ -35,12 +37,15 @@ class FocusProfileRepositoryImpl @Inject constructor(
         dao.delete(id)
 
     override suspend fun activate(id: String) {
+        android.util.Log.d("BLOCK_DEBUG", "Repository.activate: $id")
         dao.deactivateAll()
         dao.activate(id)
     }
 
-    override suspend fun deactivate() =
+    override suspend fun deactivate() {
+        android.util.Log.d("BLOCK_DEBUG", "Repository.deactivate")
         dao.deactivateAll()
+    }
 
     // ---- Mappers ----
 

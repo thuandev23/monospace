@@ -8,18 +8,41 @@ object AppBlockingState {
     private val _blockedPackage = MutableStateFlow<String?>(null)
     val blockedPackage: StateFlow<String?> = _blockedPackage.asStateFlow()
 
-    var temporaryUnlockUntil: Long = 0L
-        private set
+    private var temporaryUnlockUntil: Long = 0L
 
     fun setBlockedPackage(pkg: String?) {
-        _blockedPackage.value = pkg
+        if (_blockedPackage.value != pkg) {
+            android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: setting blockedPackage to $pkg")
+            _blockedPackage.value = pkg
+        }
     }
 
     fun grantTemporaryUnlock(durationMs: Long) {
+        android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: grantTemporaryUnlock for $durationMs ms")
         temporaryUnlockUntil = System.currentTimeMillis() + durationMs
-        _blockedPackage.value = null
+        setBlockedPackage(null)
     }
 
-    fun isTemporarilyUnlocked(): Boolean =
-        System.currentTimeMillis() < temporaryUnlockUntil
+    fun isTemporarilyUnlocked(): Boolean {
+        val now = System.currentTimeMillis()
+        if (temporaryUnlockUntil <= 0L) return false
+        val unlocked = now < temporaryUnlockUntil
+        if (!unlocked && temporaryUnlockUntil > 0L) {
+            android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: Temporary unlock EXPIRED -> blocking resumed")
+            temporaryUnlockUntil = 0L
+        } else {
+            val remaining = (temporaryUnlockUntil - now) / 1000
+            android.util.Log.v("BLOCK_DEBUG", "AppBlockingState: Unlock active, ${remaining}s remaining")
+        }
+        return unlocked
+    }
+
+    /**
+     * Gọi khi dừng Focus Mode hoặc kết thúc Session để xóa trạng thái mở khóa tạm thời.
+     */
+    fun reset() {
+        android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: Resetting states")
+        temporaryUnlockUntil = 0L
+        _blockedPackage.value = null
+    }
 }

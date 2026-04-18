@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.sp
 import com.monospace.app.core.domain.model.AppShortcut
 import com.monospace.app.ui.theme.FocusTheme
 import sh.calvin.reorderable.ReorderableColumn
-import sh.calvin.reorderable.rememberReorderableColumnState
 
 @Composable
 fun LauncherShortcutsSection(
@@ -128,63 +127,52 @@ fun LauncherShortcutsSection(
         Spacer(Modifier.height(4.dp))
 
         if (isEditMode) {
-            val listState = remember { mutableStateOf(shortcuts) }
-            LaunchedEffect(shortcuts) {
-                listState.value = shortcuts
-            }
-            
-            val reorderableState = rememberReorderableColumnState(
-                listState = listState,
+            ReorderableColumn(
+                list = shortcuts,
                 onSettle = { from, to ->
-                    val newList = listState.value.toMutableList().apply {
+                    val newList = shortcuts.toMutableList().apply {
                         add(to, removeAt(from))
                     }
                     onReorder(newList)
-                }
-            )
-
-            ReorderableColumn(
-                modifier = Modifier.fillMaxWidth(),
-                state = reorderableState
-            ) {
-                listState.value.forEachIndexed { index, shortcut ->
-                    androidx.compose.runtime.key(shortcut.packageName) {
-                        val isDragging = reorderableState.draggingItemKey == shortcut.packageName
-                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
-                        
-                        Row(
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { _, shortcut, isDragging ->
+                val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                ReorderableItem(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(elevation)
+                        .background(if (isDragging) FocusTheme.colors.surface else Color.Transparent)
+                        .padding(vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.DragIndicator,
+                            contentDescription = null,
+                            tint = FocusTheme.colors.divider,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(elevation)
-                                .background(if (isDragging) FocusTheme.colors.surface else Color.Transparent)
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                                .size(20.dp)
+                                .draggableHandle()
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = shortcut.label,
+                            modifier = Modifier.weight(1f),
+                            style = FocusTheme.typography.body.copy(
+                                color = FocusTheme.colors.primary,
+                                fontSize = 22.sp
+                            )
+                        )
+                        IconButton(onClick = { onRemove(shortcut.packageName) }, modifier = Modifier.size(28.dp)) {
                             Icon(
-                                Icons.Default.DragIndicator,
-                                contentDescription = null,
-                                tint = FocusTheme.colors.divider,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .draggableHandle()
+                                Icons.Default.Close,
+                                contentDescription = "Xóa",
+                                tint = FocusTheme.colors.destructive,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = shortcut.label,
-                                modifier = Modifier.weight(1f),
-                                style = FocusTheme.typography.body.copy(
-                                    color = FocusTheme.colors.primary,
-                                    fontSize = 22.sp
-                                )
-                            )
-                            IconButton(onClick = { onRemove(shortcut.packageName) }, modifier = Modifier.size(28.dp)) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Xóa",
-                                    tint = FocusTheme.colors.destructive,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
                         }
                     }
                 }

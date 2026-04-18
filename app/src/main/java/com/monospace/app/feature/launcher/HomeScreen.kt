@@ -1,34 +1,34 @@
 package com.monospace.app.feature.launcher
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -41,10 +41,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.R
@@ -53,26 +53,24 @@ import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.model.TaskStatus
+import com.monospace.app.feature.focus.FocusViewModel
 import com.monospace.app.feature.launcher.components.AddAppShortcutSheet
 import com.monospace.app.feature.launcher.components.ConfirmDeleteDialog
 import com.monospace.app.feature.launcher.components.ConfirmMarkDoneDialog
 import com.monospace.app.feature.launcher.components.CreateTaskSheet
 import com.monospace.app.feature.launcher.components.EmptyStateTask
+import com.monospace.app.feature.launcher.components.FocusSessionSheet
 import com.monospace.app.feature.launcher.components.HomeTopBar
 import com.monospace.app.feature.launcher.components.LauncherShortcutsSection
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
 import com.monospace.app.feature.launcher.components.MoveToFolderSheet
 import com.monospace.app.feature.launcher.components.RescheduleSheet
-import com.monospace.app.feature.launcher.components.FocusSessionSheet
 import com.monospace.app.feature.launcher.components.SelectionActionBar
 import com.monospace.app.feature.launcher.components.TaskList
-import com.monospace.app.feature.blocking.BlockedAppOverlay
-import com.monospace.app.feature.focus.FocusViewModel
 import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
 import com.monospace.app.ui.theme.FocusTheme
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -85,9 +83,7 @@ fun HomeScreen(
     focusViewModel: FocusViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val focusUiState by focusViewModel.uiState.collectAsState()
     val timerState by focusViewModel.timerState.collectAsState()
-    val blockedPackage by focusViewModel.blockedPackage.collectAsState()
     val hasUsagePermission by focusViewModel.hasUsagePermission.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarIsError by remember { mutableStateOf(true) }
@@ -142,14 +138,7 @@ fun HomeScreen(
             onOpenUsageSettings = {
                 focusViewModel.openUsageSettings()
             },
-            onRefreshUsagePermission = focusViewModel::refreshUsagePermission
-        )
-
-        BlockedAppOverlay(
-            blockedPackage = blockedPackage,
-            activeProfileName = focusUiState.activeProfile?.name,
-            timerState = timerState,
-            onDismiss = focusViewModel::stopFocusAndDeactivate
+            onRefreshUsagePermission = focusViewModel::refreshPermissions
         )
     }
 }
@@ -294,7 +283,13 @@ fun HomeScreenContent(
                                     .atZone(ZoneId.systemDefault()).toInstant()
                                 val endInstant = endD?.atTime(endT ?: LocalTime.MAX)
                                     ?.atZone(ZoneId.systemDefault())?.toInstant()
-                                onUpdateDraftSchedule(startInstant, endInstant, startT == null, rem, rep)
+                                onUpdateDraftSchedule(
+                                    startInstant,
+                                    endInstant,
+                                    startT == null,
+                                    rem,
+                                    rep
+                                )
                                 onShowDatePicker(false)
                             },
                             onNoDate = {
@@ -324,13 +319,28 @@ private fun TaskSearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text(stringResource(R.string.hint_search_tasks), color = FocusTheme.colors.secondary) },
+        placeholder = {
+            Text(
+                stringResource(R.string.hint_search_tasks),
+                color = FocusTheme.colors.secondary
+            )
+        },
         leadingIcon = {
-            Icon(Icons.Default.Search, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Default.Search,
+                null,
+                tint = FocusTheme.colors.secondary,
+                modifier = Modifier.size(20.dp)
+            )
         },
         trailingIcon = {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.Default.Close,
+                    null,
+                    tint = FocusTheme.colors.secondary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         },
         singleLine = true,
@@ -378,7 +388,8 @@ private fun SuccessContent(
     launcherViewModel: LauncherViewModel = hiltViewModel()
 ) {
     val activeTasks = remember(state.tasks) { state.tasks.filter { it.status != TaskStatus.DONE } }
-    val completedTasks = remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
+    val completedTasks =
+        remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
     var showFocusSheet by remember { mutableStateOf(false) }
 
