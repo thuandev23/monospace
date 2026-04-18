@@ -2,7 +2,9 @@ package com.monospace.app.feature.upcoming
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskDisplaySettings
 import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
@@ -42,8 +44,12 @@ sealed interface UpcomingUiState {
 class UpcomingViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val toggleTaskUseCase: ToggleTaskUseCase,
-    private val deleteTaskUseCase: DeleteTaskUseCase
+    private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
+
+    val taskDisplaySettings: StateFlow<TaskDisplaySettings> = settingsDataStore.taskDisplaySettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TaskDisplaySettings())
 
     private val _showCompleted = MutableStateFlow(false)
     private val _errorEvent = MutableSharedFlow<String>()

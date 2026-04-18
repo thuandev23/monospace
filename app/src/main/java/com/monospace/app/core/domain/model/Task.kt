@@ -22,7 +22,9 @@ data class Task(
     val reminder: ReminderConfig? = null,
 
     // Repeat Logic
-    val repeat: RepeatConfig? = null
+    val repeat: RepeatConfig? = null,
+
+    val createdAt: Instant = Instant.now()
 )
 
 data class ReminderConfig(

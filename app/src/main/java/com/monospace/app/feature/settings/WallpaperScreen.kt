@@ -1,9 +1,5 @@
 package com.monospace.app.feature.settings
 
-import android.app.WallpaperManager
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
-import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,110 +8,118 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.core.domain.model.WallpaperAlignment
+import com.monospace.app.core.domain.model.WallpaperConfig
 import com.monospace.app.ui.theme.FocusTheme
-import com.monospace.app.widget.ClockDateWidgetReceiver
-import com.monospace.app.widget.TaskListWidgetReceiver
-import com.monospace.app.widget.WidgetTheme
-import com.monospace.app.widget.WidgetThemeStore
-import com.monospace.app.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private val colorPresets = listOf(
+    "#111111" to "#EFEFEF",
+    "#1C1C1E" to "#F2F2F7",
+    "#0A1628" to "#D8E8F5",
+    "#1A1A2E" to "#E0DFFF",
+    "#FFFFFF" to "#111111",
+    "#F5F5F5" to "#1C1C1C",
+    "#F7F0E6" to "#3C3230",
+    "#2C3E50" to "#ECF0F1",
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WallpaperScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    viewModel: WallpaperViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var selectedWallpaper by remember { mutableStateOf<WallpaperOption?>(null) }
-    var isSaving by remember { mutableStateOf(false) }
+    val config by viewModel.config.collectAsState()
+    val tasks by viewModel.todayTasks.collectAsState()
 
-    val wallpaperOptions = listOf(
-        WallpaperOption(
-            id = "dark_minimal",
-            label = "Dark Minimal",
-            isDark = true,
-            primaryColor = Color(0xFF111111),
-            accentColor = Color(0xFF333333)
-        ),
-        WallpaperOption(
-            id = "light_minimal",
-            label = "Light Minimal",
-            isDark = false,
-            primaryColor = Color(0xFFF5F5F5),
-            accentColor = Color(0xFFDDDDDD)
-        ),
-        WallpaperOption(
-            id = "deep_navy",
-            label = "Deep Navy",
-            isDark = true,
-            primaryColor = Color(0xFF0A1628),
-            accentColor = Color(0xFF1E3A5F)
-        ),
-        WallpaperOption(
-            id = "warm_paper",
-            label = "Warm Paper",
-            isDark = false,
-            primaryColor = Color(0xFFF7F0E6),
-            accentColor = Color(0xFFDDD5C8)
-        ),
-        WallpaperOption(
-            id = "slate",
-            label = "Slate",
-            isDark = true,
-            primaryColor = Color(0xFF2C3E50),
-            accentColor = Color(0xFF34495E)
-        )
-    )
+    val snackbarHostState = remember { SnackbarHostState() }
+    var isApplying by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        viewModel.applyResult.collect { success ->
+            isApplying = false
+            snackbarHostState.showSnackbar(if (success) "Wallpaper applied" else "Failed to apply wallpaper")
+        }
+    }
 
     Scaffold(
         containerColor = FocusTheme.colors.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Wallpapers",
-                        style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
-                    )
+                    Text("Wallpaper", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = FocusTheme.colors.primary)
+                    }
+                },
+                actions = {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (!isApplying) FocusTheme.colors.primary else FocusTheme.colors.surface)
+                            .clickable(enabled = !isApplying) {
+                                isApplying = true
+                                viewModel.applyWallpaper()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            if (isApplying) "Applying…" else "Apply",
+                            style = FocusTheme.typography.label.copy(
+                                color = if (!isApplying) FocusTheme.colors.background else FocusTheme.colors.secondary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FocusTheme.colors.background)
@@ -127,180 +131,292 @@ fun WallpaperScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
-            // Tooltip
+            // Phone preview
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(FocusTheme.colors.surface)
-                    .padding(16.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Minimalist Home Screen",
-                        style = FocusTheme.typography.label.copy(
-                            color = FocusTheme.colors.primary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                    )
-                    Text(
-                        "Set one of these wallpapers as your home screen background for a clean, distraction-free look.",
-                        style = FocusTheme.typography.caption.copy(
-                            color = FocusTheme.colors.secondary,
-                            fontSize = 12.sp
-                        )
-                    )
-                }
-            }
-
-            // Wallpaper options — 2 per row
-            wallpaperOptions.chunked(2).forEach { rowOptions ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    rowOptions.forEach { option ->
-                        val isSelected = selectedWallpaper?.id == option.id
-                        WallpaperCard(
-                            option = option,
-                            isSelected = isSelected,
-                            onClick = { selectedWallpaper = option },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    if (rowOptions.size < 2) Spacer(Modifier.weight(1f))
-                }
-            }
-
-            // Save button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        if (selectedWallpaper != null) FocusTheme.colors.primary
-                        else FocusTheme.colors.surface
-                    )
-                    .clickable(enabled = selectedWallpaper != null && !isSaving) {
-                        scope.launch {
-                            val option = selectedWallpaper ?: return@launch
-                            isSaving = true
-                            withContext(Dispatchers.IO) {
-                                val wm = WallpaperManager.getInstance(context)
-                                val w = wm.desiredMinimumWidth.takeIf { it > 0 } ?: 1080
-                                val h = wm.desiredMinimumHeight.takeIf { it > 0 } ?: 1920
-                                val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                                bitmap.eraseColor(option.primaryColor.toArgb())
-                                wm.setBitmap(bitmap, null, true,
-                                    WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
-                                bitmap.recycle()
-                            }
-                            val theme = if (option.isDark) WidgetTheme.DARK else WidgetTheme.LIGHT
-                            val awm = AppWidgetManager.getInstance(context)
-                            (awm.getAppWidgetIds(ComponentName(context, TaskListWidgetReceiver::class.java)) +
-                             awm.getAppWidgetIds(ComponentName(context, ClockDateWidgetReceiver::class.java)))
-                                .forEach { id -> WidgetThemeStore.save(context, id, theme) }
-                            WidgetUpdater.updateAll(context)
-                            isSaving = false
-                            onNavigateBack()
-                        }
-                    }
-                    .padding(vertical = 16.dp),
+                    .padding(horizontal = 48.dp, vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    if (isSaving) "Saving…" else "Save",
-                    style = FocusTheme.typography.label.copy(
-                        color = if (selectedWallpaper != null) FocusTheme.colors.background
-                        else FocusTheme.colors.secondary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(9f / 19.5f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .border(
+                            width = 1.dp,
+                            color = FocusTheme.colors.divider,
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                ) {
+                    WallpaperCanvas(
+                        config = config,
+                        tasks = tasks,
+                        modifier = Modifier.fillMaxSize()
                     )
-                )
+                }
+            }
+
+            // Tab row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                listOf("Style", "Content").forEachIndexed { index, label ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (selectedTab == index) FocusTheme.colors.primary
+                                else FocusTheme.colors.surface
+                            )
+                            .clickable { selectedTab = index }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            label,
+                            style = FocusTheme.typography.label.copy(
+                                color = if (selectedTab == index) FocusTheme.colors.background
+                                        else FocusTheme.colors.secondary,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                        )
+                    }
+                    if (index == 0) Spacer(Modifier.width(8.dp))
+                }
             }
 
             Spacer(Modifier.height(24.dp))
+
+            when (selectedTab) {
+                0 -> StyleTab(config = config, onConfigChange = viewModel::updateConfig)
+                1 -> ContentTab(config = config, onConfigChange = viewModel::updateConfig)
+            }
+
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
-private data class WallpaperOption(
-    val id: String,
-    val label: String,
-    val isDark: Boolean,
-    val primaryColor: Color,
-    val accentColor: Color
-)
-
 @Composable
-private fun WallpaperCard(
-    option: WallpaperOption,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun StyleTab(config: WallpaperConfig, onConfigChange: (WallpaperConfig) -> Unit) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(option.primaryColor)
-                .border(
-                    width = if (isSelected) 2.dp else 0.dp,
-                    color = if (isSelected) FocusTheme.colors.primary else Color.Transparent,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .clickable { onClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            // Simulated wallpaper preview
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                repeat(3) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp)
-                            .background(option.accentColor, RoundedCornerShape(1.dp))
-                    )
-                }
+        Text(
+            "Background",
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 12.sp
+            )
+        )
+
+        ColorPresetGrid(
+            presets = colorPresets,
+            selectedBg = config.backgroundColorHex,
+            onSelect = { bg, text ->
+                onConfigChange(config.copy(backgroundColorHex = bg, textColorHex = text))
             }
-            if (isSelected) {
+        )
+
+        HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+
+        Text(
+            "Position",
+            style = FocusTheme.typography.caption.copy(
+                color = FocusTheme.colors.secondary,
+                fontSize = 12.sp
+            )
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            WallpaperAlignment.entries.forEach { alignment ->
+                val isSelected = config.contentAlignment == alignment
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(24.dp)
-                        .background(FocusTheme.colors.primary, RoundedCornerShape(12.dp)),
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSelected) FocusTheme.colors.primary else FocusTheme.colors.surface)
+                        .clickable { onConfigChange(config.copy(contentAlignment = alignment)) }
+                        .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Check,
-                        null,
-                        tint = FocusTheme.colors.background,
-                        modifier = Modifier.size(14.dp)
+                    Text(
+                        alignment.name.lowercase().replaceFirstChar { it.uppercase() },
+                        style = FocusTheme.typography.label.copy(
+                            color = if (isSelected) FocusTheme.colors.background else FocusTheme.colors.secondary,
+                            fontSize = 13.sp
+                        )
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ColorPresetGrid(
+    presets: List<Pair<String, String>>,
+    selectedBg: String,
+    onSelect: (bg: String, text: String) -> Unit
+) {
+    val rows = presets.chunked(4)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                row.forEach { (bg, text) ->
+                    val bgColor = bg.toComposeColor(Color.Black)
+                    val isSelected = selectedBg.equals(bg, ignoreCase = true)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                            .background(bgColor)
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) FocusTheme.colors.primary else FocusTheme.colors.divider,
+                                shape = CircleShape
+                            )
+                            .clickable { onSelect(bg, text) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContentTab(config: WallpaperConfig, onConfigChange: (WallpaperConfig) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        ContentToggleRow(
+            label = "Time",
+            checked = config.showTime,
+            onCheckedChange = { onConfigChange(config.copy(showTime = it)) }
+        )
+        HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+        ContentToggleRow(
+            label = "Date",
+            checked = config.showDate,
+            onCheckedChange = { onConfigChange(config.copy(showDate = it)) }
+        )
+        HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+        ContentToggleRow(
+            label = "Tasks",
+            checked = config.showTasks,
+            onCheckedChange = { onConfigChange(config.copy(showTasks = it)) }
+        )
+
+        if (config.showTasks) {
+            HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Tasks shown",
+                    style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    StepButton(label = "−", enabled = config.taskLimit > 1) {
+                        onConfigChange(config.copy(taskLimit = config.taskLimit - 1))
+                    }
+                    Text(
+                        "${config.taskLimit}",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.primary,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp
+                        )
+                    )
+                    StepButton(label = "+", enabled = config.taskLimit < 10) {
+                        onConfigChange(config.copy(taskLimit = config.taskLimit + 1))
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+        ContentToggleRow(
+            label = "Show on home screen",
+            checked = config.showOnHome,
+            onCheckedChange = { onConfigChange(config.copy(showOnHome = it)) }
+        )
+        HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.4f))
+        ContentToggleRow(
+            label = "Auto-update daily",
+            checked = config.autoUpdate,
+            onCheckedChange = { onConfigChange(config.copy(autoUpdate = it)) }
+        )
+    }
+}
+
+@Composable
+private fun ContentToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = FocusTheme.colors.background,
+                checkedTrackColor = FocusTheme.colors.primary,
+                uncheckedThumbColor = FocusTheme.colors.secondary,
+                uncheckedTrackColor = FocusTheme.colors.surface
+            )
+        )
+    }
+}
+
+@Composable
+private fun StepButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(if (enabled) FocusTheme.colors.surface else FocusTheme.colors.background)
+            .border(1.dp, FocusTheme.colors.divider, CircleShape)
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
         Text(
-            option.label,
-            style = FocusTheme.typography.caption.copy(
-                color = FocusTheme.colors.secondary,
-                fontSize = 12.sp
+            label,
+            style = FocusTheme.typography.body.copy(
+                color = if (enabled) FocusTheme.colors.primary else FocusTheme.colors.divider,
+                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp
             )
         )
     }

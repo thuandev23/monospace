@@ -20,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -28,10 +31,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.monospace.app.feature.blocking.BlockedAppOverlay
 import com.monospace.app.feature.focus.FocusViewModel
+import com.monospace.app.feature.lock.AppLockScreen
 import com.monospace.app.feature.launcher.components.HomeBottomBar
 import com.monospace.app.feature.onboardings.OnboardingViewModel
+import com.monospace.app.feature.settings.GeneralSettingsViewModel
 import com.monospace.app.feature.settings.TabBarSettingsViewModel
 import com.monospace.app.ui.navigation.MonospaceNavGraph
 import com.monospace.app.ui.navigation.Screen
@@ -45,9 +53,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MONOSPACETheme {
-                MainScreen()
-            }
+            MainScreen()
         }
     }
 
@@ -59,6 +65,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
+    val generalViewModel: GeneralSettingsViewModel = hiltViewModel()
+    val generalSettings by generalViewModel.settings.collectAsState()
+    val lockPin by generalViewModel.lockPin.collectAsState()
+
+    var isLocked by remember { mutableStateOf(lockPin != null) }
+
+    // Re-lock when app resumes from background (if PIN is set)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            if (lockPin != null) isLocked = true
+        }
+    }
+
+    // When PIN is removed via settings, auto-unlock
+    LaunchedEffect(lockPin) {
+        if (lockPin == null) isLocked = false
+    }
+
+    MONOSPACETheme(appTheme = generalSettings.theme) {
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -180,5 +207,15 @@ fun MainScreen() {
                 focusViewModel.stopFocusAndDeactivate()
             }
         )
+
+        // App lock screen overlay
+        if (isLocked && lockPin != null) {
+            AppLockScreen(
+                correctPin = lockPin!!,
+                onUnlock = { isLocked = false }
+            )
+        }
     }
+
+    } // end MONOSPACETheme
 }

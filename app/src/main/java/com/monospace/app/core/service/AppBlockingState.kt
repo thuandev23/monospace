@@ -18,7 +18,10 @@ object AppBlockingState {
     }
 
     fun grantTemporaryUnlock(durationMs: Long) {
-        android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: grantTemporaryUnlock for $durationMs ms")
+        android.util.Log.d(
+            "BLOCK_DEBUG",
+            "AppBlockingState: grantTemporaryUnlock for $durationMs ms"
+        )
         temporaryUnlockUntil = System.currentTimeMillis() + durationMs
         setBlockedPackage(null)
     }
@@ -28,11 +31,13 @@ object AppBlockingState {
         if (temporaryUnlockUntil <= 0L) return false
         val unlocked = now < temporaryUnlockUntil
         if (!unlocked && temporaryUnlockUntil > 0L) {
-            android.util.Log.d("BLOCK_DEBUG", "AppBlockingState: Temporary unlock EXPIRED -> blocking resumed")
+            android.util.Log.d(
+                "BLOCK_DEBUG",
+                "AppBlockingState: Temporary unlock EXPIRED -> blocking resumed"
+            )
             temporaryUnlockUntil = 0L
         } else {
             val remaining = (temporaryUnlockUntil - now) / 1000
-            android.util.Log.v("BLOCK_DEBUG", "AppBlockingState: Unlock active, ${remaining}s remaining")
         }
         return unlocked
     }

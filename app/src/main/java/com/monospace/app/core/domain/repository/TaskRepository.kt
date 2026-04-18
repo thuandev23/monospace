@@ -13,6 +13,7 @@ interface TaskRepository {
     suspend fun getTaskById(taskId: String): Task?
     suspend fun saveTask(task: Task)
     suspend fun markTaskCompleted(taskId: String, isCompleted: Boolean)
+    suspend fun setTaskStatus(taskId: String, status: com.monospace.app.core.domain.model.TaskStatus)
     suspend fun deleteTask(taskId: String)
     suspend fun mergeRemoteTasks(remoteTasks: List<Task>)
     suspend fun getPendingTasks(): List<Task>

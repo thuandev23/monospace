@@ -50,6 +50,7 @@ fun UpcomingScreen(
     viewModel: UpcomingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val taskDisplaySettings by viewModel.taskDisplaySettings.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -157,6 +158,7 @@ fun UpcomingScreen(
                                     onLongClick = {},
                                     onSwipeComplete = { viewModel.toggleTask(task.id, true) },
                                     onSwipeDelete = { viewModel.deleteTask(task.id) },
+                                    displaySettings = taskDisplaySettings,
                                     modifier = Modifier.animateItem()
                                 )
                             }
@@ -178,6 +180,7 @@ fun UpcomingScreen(
                                     onLongClick = {},
                                     onSwipeComplete = { viewModel.toggleTask(task.id, false) },
                                     onSwipeDelete = { viewModel.deleteTask(task.id) },
+                                    displaySettings = taskDisplaySettings,
                                     modifier = Modifier.animateItem()
                                 )
                             }

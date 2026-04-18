@@ -1,6 +1,8 @@
 package com.monospace.app.feature.settings
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -124,16 +126,26 @@ fun GeneralSettingsScreen(
                     )
                 },
                 onClick = {
-                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    } else {
-                        Intent(Settings.ACTION_LOCALE_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    var launched = false
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                            )
+                            launched = true
                         }
                     }
-                    context.startActivity(intent)
+                    if (!launched) {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_LOCALE_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
                 }
             )
 

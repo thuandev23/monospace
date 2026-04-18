@@ -51,6 +51,7 @@ class AppBlockingService : Service() {
         scope.cancel()
         countdownJob?.cancel()
         AppBlockingState.setBlockedPackage(null)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 

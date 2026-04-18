@@ -20,6 +20,7 @@ import com.monospace.app.core.domain.model.SortOption
 import com.monospace.app.core.domain.model.TaskAlignment
 import com.monospace.app.core.domain.model.TaskDisplaySettings
 import com.monospace.app.core.domain.model.ViewSettings
+import com.monospace.app.core.domain.model.WallpaperConfig
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -65,6 +66,9 @@ class SettingsDataStore @Inject constructor(
 
         // Passcode PIN
         private val KEY_LOCK_PIN = stringPreferencesKey("lock_pin")
+
+        // Wallpaper
+        private val KEY_WALLPAPER_CONFIG = stringPreferencesKey("wallpaper_config")
     }
 
     // --- Default List ---
@@ -280,5 +284,16 @@ class SettingsDataStore @Inject constructor(
             if (pin == null) prefs.remove(KEY_LOCK_PIN)
             else prefs[KEY_LOCK_PIN] = pin
         }
+    }
+
+    // --- Wallpaper Config ---
+
+    val wallpaperConfig: Flow<WallpaperConfig> = context.dataStore.data.map { prefs ->
+        val json = prefs[KEY_WALLPAPER_CONFIG] ?: return@map WallpaperConfig()
+        runCatching { gson.fromJson(json, WallpaperConfig::class.java) }.getOrDefault(WallpaperConfig())
+    }
+
+    suspend fun setWallpaperConfig(config: WallpaperConfig) {
+        context.dataStore.edit { it[KEY_WALLPAPER_CONFIG] = gson.toJson(config) }
     }
 }

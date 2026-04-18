@@ -60,7 +60,10 @@ fun LauncherShortcutsSection(
     onToggleEditMode: () -> Unit,
     onAddClick: () -> Unit
 ) {
-    if (shortcuts.isEmpty() && !isEditMode) {
+    // Local copy for drag-and-drop — avoids DataStore round-trip lag during dragging
+    var localShortcuts by remember(shortcuts) { mutableStateOf(shortcuts) }
+
+    if (localShortcuts.isEmpty() && !isEditMode) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -128,25 +131,27 @@ fun LauncherShortcutsSection(
 
         if (isEditMode) {
             ReorderableColumn(
-                list = shortcuts,
+                list = localShortcuts,
                 onSettle = { from, to ->
-                    val newList = shortcuts.toMutableList().apply {
+                    val newList = localShortcuts.toMutableList().apply {
                         add(to, removeAt(from))
                     }
-                    onReorder(newList)
+                    localShortcuts = newList  // update local immediately (smooth)
+                    onReorder(newList)         // persist async
                 },
                 modifier = Modifier.fillMaxWidth()
             ) { _, shortcut, isDragging ->
                 val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
-                ReorderableItem(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(elevation)
-                        .background(if (isDragging) FocusTheme.colors.surface else Color.Transparent)
-                        .padding(vertical = 12.dp)
-                ) {
+                ReorderableItem(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(elevation, RoundedCornerShape(8.dp))
+                            .background(
+                                if (isDragging) FocusTheme.colors.surface else Color.Transparent,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -178,7 +183,7 @@ fun LauncherShortcutsSection(
                 }
             }
         } else {
-            shortcuts.forEach { shortcut ->
+            localShortcuts.forEach { shortcut ->
                 ShortcutRow(
                     shortcut = shortcut,
                     onLaunch = { onLaunch(shortcut.packageName) }

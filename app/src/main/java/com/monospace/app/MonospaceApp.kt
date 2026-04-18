@@ -7,18 +7,23 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.sync.SyncScheduler
+import com.monospace.app.feature.settings.WallpaperScheduler
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
 class MonospaceApp : Application(), Configuration.Provider {
 
-    @Inject
-    lateinit var workerFactory: HiltWorkerFactory
-
-    @Inject
-    lateinit var syncScheduler: SyncScheduler
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var syncScheduler: SyncScheduler
+    @Inject lateinit var wallpaperScheduler: WallpaperScheduler
+    @Inject lateinit var settingsDataStore: SettingsDataStore
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -30,6 +35,14 @@ class MonospaceApp : Application(), Configuration.Provider {
         WorkManager.initialize(this, workManagerConfiguration)
         createNotificationChannels()
         syncScheduler.schedulePeriodicSync()
+        restoreWallpaperScheduleIfNeeded()
+    }
+
+    private fun restoreWallpaperScheduleIfNeeded() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val config = settingsDataStore.wallpaperConfig.first()
+            if (config.autoUpdate) wallpaperScheduler.schedule()
+        }
     }
 
     private fun createNotificationChannels() {

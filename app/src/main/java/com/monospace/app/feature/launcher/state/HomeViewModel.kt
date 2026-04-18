@@ -3,6 +3,8 @@ package com.monospace.app.feature.launcher.state
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.AddTaskPosition
+import com.monospace.app.core.domain.model.GeneralSettings
 import com.monospace.app.core.domain.model.GroupOption
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
@@ -36,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -126,6 +129,19 @@ class HomeViewModel @Inject constructor(
     private val _viewSettings = settingsDataStore.viewSettings
         .stateIn(viewModelScope, SharingStarted.Eagerly, ViewSettings())
 
+    val taskDisplaySettings = settingsDataStore.taskDisplaySettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.monospace.app.core.domain.model.TaskDisplaySettings())
+
+    val generalSettings: StateFlow<GeneralSettings> = settingsDataStore.generalSettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GeneralSettings())
+
+    val wallpaperConfig = settingsDataStore.wallpaperConfig
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.monospace.app.core.domain.model.WallpaperConfig())
+
+    val wallpaperTasks: StateFlow<List<Task>> = getTasksUseCase("today")
+        .map { tasks -> tasks.filter { it.status != TaskStatus.DONE }.take(10) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // Intermediate data classes to avoid type-unsafe 14-arg combine
     private data class TaskListState(
         val tasks: List<Task>,
@@ -207,7 +223,7 @@ class HomeViewModel @Inject constructor(
         } else state
     }
 
-    val uiState: StateFlow<HomeUiState> = combine(_withPriority, _viewSettings) { state, settings ->
+    val uiState: StateFlow<HomeUiState> = combine(_withPriority, _viewSettings, generalSettings) { state, settings, general ->
         if (state is HomeUiState.Success) {
             var tasks = state.tasks
 
@@ -225,11 +241,12 @@ class HomeViewModel @Inject constructor(
             // Apply sort
             tasks = when (settings.sortBy) {
                 SortOption.NAME -> tasks.sortedBy { it.title.lowercase() }
-                SortOption.DATE -> tasks.sortedWith(
-                    compareBy(nullsLast()) { it.startDateTime }
-                )
+                SortOption.DATE -> tasks.sortedWith(compareBy(nullsLast()) { it.startDateTime })
                 SortOption.FOLDER -> tasks.sortedBy { it.listId }
-                SortOption.MANUAL -> tasks // DB order
+                SortOption.MANUAL -> if (general.addTaskPosition == AddTaskPosition.TOP)
+                    tasks.sortedByDescending { it.createdAt }
+                else
+                    tasks.sortedBy { it.createdAt }
             }
 
             state.copy(tasks = tasks, viewSettings = settings)
@@ -302,6 +319,17 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 toggleTaskUseCase(taskId, isCompleted)
+                refreshWidget()
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+            }
+        }
+    }
+
+    fun setTaskStatus(taskId: String, status: com.monospace.app.core.domain.model.TaskStatus) {
+        viewModelScope.launch {
+            try {
+                taskRepository.setTaskStatus(taskId, status)
                 refreshWidget()
             } catch (e: Exception) {
                 _errorEvent.emit("Không thể cập nhật task: ${e.message}")

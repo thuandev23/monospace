@@ -6,5 +6,6 @@ data class TaskDisplaySettings(
     val showStatusCircle: Boolean = true,
     val lowercase: Boolean = false,
     val fontSize: Int = 17,
-    val alignment: TaskAlignment = TaskAlignment.LEADING
+    val alignment: TaskAlignment = TaskAlignment.LEADING,
+    val secondStatus: SecondStatus = SecondStatus.CANCELLED
 )

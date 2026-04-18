@@ -67,6 +67,11 @@ class TaskRepositoryImpl @Inject constructor(
         WidgetUpdater.updateAll(context)
     }
 
+    override suspend fun setTaskStatus(taskId: String, status: com.monospace.app.core.domain.model.TaskStatus) {
+        taskDao.updateTaskStatus(taskId, status.name)
+        WidgetUpdater.updateAll(context)
+    }
+
     override suspend fun deleteTask(taskId: String) {
         taskDao.markAsDeleted(taskId)
         WidgetUpdater.updateAll(context)

@@ -45,7 +45,8 @@ fun TaskEntity.toDomain(): Task {
                 unit = RepeatUnit.valueOf(this.repeatUnit),
                 daysOfWeek = this.repeatDaysOfWeek?.split(",")?.map { it.toInt() }?.toSet()
             )
-        } else null
+        } else null,
+        createdAt = Instant.ofEpochMilli(this.createdAt)
     )
 }
 
@@ -73,6 +74,7 @@ fun Task.toEntity(): TaskEntity {
         reminderTime = this.reminder?.remindTime?.toString(),
         repeatInterval = this.repeat?.interval,
         repeatUnit = this.repeat?.unit?.name,
-        repeatDaysOfWeek = this.repeat?.daysOfWeek?.joinToString(",")
+        repeatDaysOfWeek = this.repeat?.daysOfWeek?.joinToString(","),
+        createdAt = this.createdAt.toEpochMilli()
     )
 }

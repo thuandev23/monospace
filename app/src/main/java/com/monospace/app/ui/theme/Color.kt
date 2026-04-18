@@ -42,4 +42,30 @@ val DarkFocusColors = FocusColors(
     onBackground = Color(0xFFFFFFFF)
 )
 
+val RemindersLightFocusColors = FocusColors(
+    background = Color(0xFFFFFFFF),
+    surface = Color(0xFFF2F2F7),
+    surfaceAlt = Color(0xFFE5E5EA),
+    primary = Color(0xFF007AFF),
+    secondary = Color(0xFF6B7280),
+    destructive = Color(0xFFFF3B30),
+    success = Color(0xFF34C759),
+    divider = Color(0xFFE5E7EB),
+    onPrimary = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF000000)
+)
+
+val RemindersDarkFocusColors = FocusColors(
+    background = Color(0xFF000000),
+    surface = Color(0xFF1C1C1E),
+    surfaceAlt = Color(0xFF2C2C2E),
+    primary = Color(0xFF0A84FF),
+    secondary = Color(0xFF9CA3AF),
+    destructive = Color(0xFFFF453A),
+    success = Color(0xFF30D158),
+    divider = Color(0xFF38383A),
+    onPrimary = Color(0xFFFFFFFF),
+    onBackground = Color(0xFFFFFFFF)
+)
+
 val LocalFocusColors = staticCompositionLocalOf { LightFocusColors }

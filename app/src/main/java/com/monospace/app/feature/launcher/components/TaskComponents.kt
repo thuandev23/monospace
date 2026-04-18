@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
@@ -51,7 +52,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.SecondStatus
 import com.monospace.app.core.domain.model.Task
+import com.monospace.app.core.domain.model.TaskAlignment
+import com.monospace.app.core.domain.model.TaskDisplaySettings
 import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.ui.theme.FocusTheme
 import java.time.Instant
@@ -68,11 +72,15 @@ fun TaskList(
     onTaskToggle: (String, Boolean) -> Unit,
     onTaskClick: (Task) -> Unit,
     onTaskLongClick: (Task) -> Unit,
-    onTaskSwipeDelete: (String) -> Unit = {}
+    onTaskSwipeDelete: (String) -> Unit = {},
+    displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
+    reverseLayout: Boolean = false,
+    onTaskStatusChange: ((String, TaskStatus) -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(bottom = 100.dp)
+        contentPadding = PaddingValues(bottom = 100.dp),
+        reverseLayout = reverseLayout
     ) {
         items(items = activeTasks, key = { it.id }) { task ->
             SwipeableTaskItem(
@@ -84,6 +92,8 @@ fun TaskList(
                 onLongClick = { onTaskLongClick(task) },
                 onSwipeComplete = { onTaskToggle(task.id, true) },
                 onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                displaySettings = displaySettings,
+                onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
                 modifier = Modifier.animateItem()
             )
         }
@@ -108,6 +118,8 @@ fun TaskList(
                 onLongClick = { onTaskLongClick(task) },
                 onSwipeComplete = { onTaskToggle(task.id, false) },
                 onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                displaySettings = displaySettings,
+                onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
                 modifier = Modifier.animateItem()
             )
         }
@@ -125,19 +137,37 @@ fun SwipeableTaskItem(
     onLongClick: () -> Unit,
     onSwipeComplete: () -> Unit,
     onSwipeDelete: () -> Unit,
+    displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
+    onStatusChange: ((TaskStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Không cho swipe khi đang ở selection mode
     if (isSelectionMode) {
-        TaskItem(task, isSelected, isSelectionMode, onToggle, onClick, onLongClick, modifier)
+        TaskItem(
+            task,
+            isSelected,
+            isSelectionMode,
+            onToggle,
+            onClick,
+            onLongClick,
+            displaySettings,
+            onStatusChange,
+            modifier
+        )
         return
     }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> { onSwipeComplete(); true }
-                SwipeToDismissBoxValue.EndToStart -> { onSwipeDelete(); true }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onSwipeComplete(); true
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onSwipeDelete(); true
+                }
+
                 SwipeToDismissBoxValue.Settled -> false
             }
         },
@@ -174,18 +204,29 @@ fun SwipeableTaskItem(
                         tint = FocusTheme.colors.success,
                         modifier = Modifier.size(22.dp)
                     )
+
                     SwipeToDismissBoxValue.EndToStart -> Icon(
                         Icons.Default.Delete,
                         contentDescription = "Xóa",
                         tint = FocusTheme.colors.destructive,
                         modifier = Modifier.size(22.dp)
                     )
+
                     else -> {}
                 }
             }
         }
     ) {
-        TaskItem(task, isSelected, isSelectionMode, onToggle, onClick, onLongClick)
+        TaskItem(
+            task,
+            isSelected,
+            isSelectionMode,
+            onToggle,
+            onClick,
+            onLongClick,
+            displaySettings,
+            onStatusChange
+        )
     }
 }
 
@@ -198,9 +239,21 @@ fun TaskItem(
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
+    onStatusChange: ((TaskStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val textAlign = when (displaySettings.alignment) {
+        TaskAlignment.CENTER -> androidx.compose.ui.text.style.TextAlign.Center
+        TaskAlignment.TRAILING -> androidx.compose.ui.text.style.TextAlign.End
+        else -> androidx.compose.ui.text.style.TextAlign.Start
+    }
+    val rowAlignment = when (displaySettings.alignment) {
+        TaskAlignment.CENTER -> Arrangement.Center
+        TaskAlignment.TRAILING -> Arrangement.End
+        else -> Arrangement.Start
+    }
 
     Row(
         modifier = modifier
@@ -215,22 +268,33 @@ fun TaskItem(
             .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.Top
     ) {
-        CircularCheckbox(
-            checked = if (isSelectionMode) isSelected else task.status == TaskStatus.DONE,
-            onCheckedChange = { 
-                if (isSelectionMode) onClick() else onToggle(it)
-            },
-            modifier = Modifier.padding(top = 2.dp)
-        )
+        if (displaySettings.showStatusCircle) {
+            CircularCheckbox(
+                checked = task.status == TaskStatus.DONE,
+                onCheckedChange = { if (isSelectionMode) onClick() else onToggle(it) },
+                taskStatus = if (isSelectionMode) (if (isSelected) TaskStatus.DONE else TaskStatus.NOT_DONE) else task.status,
+                secondStatus = displaySettings.secondStatus,
+                onStatusChange = if (isSelectionMode) null else onStatusChange,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+        }
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = when (displaySettings.alignment) {
+                TaskAlignment.CENTER -> Alignment.CenterHorizontally
+                TaskAlignment.TRAILING -> Alignment.End
+                else -> Alignment.Start
+            }
+        ) {
             Text(
-                text = task.title,
+                text = if (displaySettings.lowercase) task.title.lowercase() else task.title,
                 style = FocusTheme.typography.headline.copy(
                     color = if (task.status == TaskStatus.DONE) FocusTheme.colors.secondary else FocusTheme.colors.primary,
-                    textDecoration = if (task.status == TaskStatus.DONE) TextDecoration.LineThrough else TextDecoration.None
+                    textDecoration = if (task.status == TaskStatus.DONE) TextDecoration.LineThrough else TextDecoration.None,
+                    fontSize = displaySettings.fontSize.sp,
+                    textAlign = textAlign
                 )
             )
 
@@ -248,7 +312,7 @@ fun TaskItem(
                             text = formatInstant(it, task.isAllDay)
                         )
                     }
-                    
+
                     // Hiển thị Nhắc nhở
                     task.reminder?.let {
                         InfoTag(
@@ -256,7 +320,7 @@ fun TaskItem(
                             text = "${it.value} ${it.unit.name.lowercase()}"
                         )
                     }
-                    
+
                     // Hiển thị Lặp lại
                     task.repeat?.let {
                         InfoTag(
@@ -303,19 +367,68 @@ private fun formatInstant(instant: Instant, isAllDay: Boolean): String {
 fun CircularCheckbox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    taskStatus: TaskStatus = if (checked) TaskStatus.DONE else TaskStatus.NOT_DONE,
+    secondStatus: SecondStatus = SecondStatus.CANCELLED,
+    onStatusChange: ((TaskStatus) -> Unit)? = null
 ) {
+    val nextStatus = when (taskStatus) {
+        TaskStatus.NOT_DONE -> if (secondStatus == SecondStatus.IN_PROGRESS) TaskStatus.IN_PROGRESS else TaskStatus.CANCELLED
+        TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED -> TaskStatus.DONE
+        TaskStatus.DONE -> TaskStatus.NOT_DONE
+    }
+
+    val bgColor = when (taskStatus) {
+        TaskStatus.DONE -> FocusTheme.colors.primary
+        TaskStatus.IN_PROGRESS -> FocusTheme.colors.success.copy(alpha = 0.2f)
+        TaskStatus.CANCELLED -> FocusTheme.colors.destructive.copy(alpha = 0.15f)
+        TaskStatus.NOT_DONE -> Color.Transparent
+    }
+    val borderColor = when (taskStatus) {
+        TaskStatus.DONE -> FocusTheme.colors.primary
+        TaskStatus.IN_PROGRESS -> FocusTheme.colors.success
+        TaskStatus.CANCELLED -> FocusTheme.colors.destructive
+        TaskStatus.NOT_DONE -> FocusTheme.colors.secondary
+    }
+
     Box(
         modifier = modifier
             .size(24.dp)
             .clip(CircleShape)
-            .background(if (checked) FocusTheme.colors.primary else Color.Transparent)
-            .border(2.dp, if (checked) FocusTheme.colors.primary else FocusTheme.colors.secondary, CircleShape)
-            .clickable { onCheckedChange(!checked) },
+            .background(bgColor)
+            .border(2.dp, borderColor, CircleShape)
+            .clickable {
+                if (onStatusChange != null) {
+                    onStatusChange(nextStatus)
+                } else {
+                    onCheckedChange(!checked)
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
-        if (checked) {
-            Icon(Icons.Default.Check, null, tint = FocusTheme.colors.background, modifier = Modifier.size(16.dp))
+        when (taskStatus) {
+            TaskStatus.DONE -> Icon(
+                Icons.Default.Check,
+                null,
+                tint = FocusTheme.colors.background,
+                modifier = Modifier.size(16.dp)
+            )
+
+            TaskStatus.CANCELLED -> Icon(
+                Icons.Default.Close,
+                null,
+                tint = FocusTheme.colors.destructive,
+                modifier = Modifier.size(14.dp)
+            )
+
+            TaskStatus.IN_PROGRESS -> Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(FocusTheme.colors.success)
+            )
+
+            TaskStatus.NOT_DONE -> {}
         }
     }
 }

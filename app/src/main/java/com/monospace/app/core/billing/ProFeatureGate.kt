@@ -16,7 +16,13 @@ enum class ProFeature {
 class ProFeatureGate @Inject constructor(
     private val billingManager: BillingManager
 ) {
-    val isPro: Flow<Boolean> = billingManager.billingState.map { it == BillingState.SUBSCRIBED }
+    // TODO: remove before release
+    private val debugUnlockAll = true
+
+    val isPro: Flow<Boolean> = if (debugUnlockAll)
+        kotlinx.coroutines.flow.flowOf(true)
+    else
+        billingManager.billingState.map { it == BillingState.SUBSCRIBED }
 
     fun isFeatureEnabled(feature: ProFeature): Flow<Boolean> = isPro
 }
