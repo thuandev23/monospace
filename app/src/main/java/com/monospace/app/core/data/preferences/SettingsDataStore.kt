@@ -61,6 +61,7 @@ class SettingsDataStore @Inject constructor(
         private val KEY_VIEW_SHOW_COMPLETED = booleanPreferencesKey("view_show_completed")
         private val KEY_VIEW_SHOW_TIME = booleanPreferencesKey("view_show_time")
         private val KEY_VIEW_SHOW_FOLDER = booleanPreferencesKey("view_show_folder")
+        private val KEY_VIEW_SHOW_PRIORITY = booleanPreferencesKey("view_show_priority")
         private val KEY_VIEW_SORT_BY = stringPreferencesKey("view_sort_by")
         private val KEY_VIEW_GROUP_BY = stringPreferencesKey("view_group_by")
 
@@ -121,6 +122,7 @@ class SettingsDataStore @Inject constructor(
             showCompleted = prefs[KEY_VIEW_SHOW_COMPLETED] ?: true,
             showTime = prefs[KEY_VIEW_SHOW_TIME] ?: true,
             showFolder = prefs[KEY_VIEW_SHOW_FOLDER] ?: true,
+            showPriority = prefs[KEY_VIEW_SHOW_PRIORITY] ?: false,
             sortBy = SortOption.entries.firstOrNull { it.name == prefs[KEY_VIEW_SORT_BY] } ?: SortOption.MANUAL,
             groupBy = GroupOption.entries.firstOrNull { it.name == prefs[KEY_VIEW_GROUP_BY] } ?: GroupOption.NONE
         )
@@ -133,6 +135,7 @@ class SettingsDataStore @Inject constructor(
             prefs[KEY_VIEW_SHOW_COMPLETED] = settings.showCompleted
             prefs[KEY_VIEW_SHOW_TIME] = settings.showTime
             prefs[KEY_VIEW_SHOW_FOLDER] = settings.showFolder
+            prefs[KEY_VIEW_SHOW_PRIORITY] = settings.showPriority
             prefs[KEY_VIEW_SORT_BY] = settings.sortBy.name
             prefs[KEY_VIEW_GROUP_BY] = settings.groupBy.name
         }

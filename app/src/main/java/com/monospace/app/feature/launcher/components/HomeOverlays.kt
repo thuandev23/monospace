@@ -1701,3 +1701,73 @@ private fun formatSeconds(totalSeconds: Long): String {
     val s = totalSeconds % 60
     return "%02d:%02d".format(m, s)
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OverdueRescheduleSheet(
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate) -> Unit
+) {
+    val today = LocalDate.now()
+    val zone = ZoneId.systemDefault()
+    val initialMillis = today.atStartOfDay(zone).toInstant().toEpochMilli()
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.TextButton(onClick = onDismiss) {
+                    Text(
+                        "Cancel",
+                        style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
+                    )
+                }
+                Text(
+                    text = "Reschedule",
+                    style = FocusTheme.typography.body.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = FocusTheme.colors.primary
+                    ),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val millis = datePickerState.selectedDateMillis
+                        val selected = if (millis != null)
+                            Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
+                        else today
+                        onConfirm(selected)
+                    }
+                ) {
+                    Text(
+                        "Done",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.primary,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}

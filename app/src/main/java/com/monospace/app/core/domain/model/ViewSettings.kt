@@ -6,6 +6,7 @@ data class ViewSettings(
     val showCompleted: Boolean = true,
     val showTime: Boolean = true,
     val showFolder: Boolean = true,
+    val showPriority: Boolean = false,
     val sortBy: SortOption = SortOption.MANUAL,
     val groupBy: GroupOption = GroupOption.NONE
 )

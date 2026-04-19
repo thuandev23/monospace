@@ -1,9 +1,17 @@
 package com.monospace.app.feature.search
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,11 +40,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.fadeOut
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -49,13 +63,17 @@ import com.monospace.app.ui.theme.FocusTheme
 fun SearchScreen(
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToCreateTask: () -> Unit = {},
+    onClose: () -> Unit = {},
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    var visible by remember { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        visible = true
         focusRequester.requestFocus()
     }
 
@@ -81,46 +99,80 @@ fun SearchScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            // Search bar
-            OutlinedTextField(
-                value = uiState.query,
-                onValueChange = viewModel::setQuery,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
-                placeholder = {
-                    Text(
-                        "Search tasks...",
-                        style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
+            // Search bar + X button
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInVertically(
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    initialOffsetY = { -it }
+                ) + fadeIn(tween(200))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = uiState.query,
+                        onValueChange = viewModel::setQuery,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { isFocused = it.isFocused },
+                        placeholder = {
+                            Text(
+                                "Search",
+                                style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+                        },
+                        trailingIcon = {
+                            if (uiState.query.isNotBlank()) {
+                                IconButton(onClick = viewModel::clearQuery) {
+                                    Icon(Icons.Default.Close, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FocusTheme.colors.primary,
+                            unfocusedBorderColor = FocusTheme.colors.divider,
+                            focusedTextColor = FocusTheme.colors.primary,
+                            unfocusedTextColor = FocusTheme.colors.primary
+                        )
                     )
-                },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
-                },
-                trailingIcon = {
-                    if (uiState.query.isNotBlank()) {
-                        IconButton(onClick = viewModel::clearQuery) {
+                    AnimatedVisibility(
+                        visible = isFocused,
+                        enter = fadeIn(tween(150)) + slideInHorizontally { it },
+                        exit = fadeOut(tween(150)) + slideOutHorizontally { it }
+                    ) {
+                        IconButton(
+                            onClick = { focusManager.clearFocus() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
                             Icon(Icons.Default.Close, null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(20.dp))
                         }
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = FocusTheme.colors.primary,
-                    unfocusedBorderColor = FocusTheme.colors.divider,
-                    focusedTextColor = FocusTheme.colors.primary,
-                    unfocusedTextColor = FocusTheme.colors.primary
-                )
-            )
+                }
+            } // end AnimatedVisibility (search bar)
 
             Spacer(Modifier.height(16.dp))
 
             when {
                 !uiState.isSearching -> {
                     // Empty state before typing
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(300, delayMillis = 150)) + scaleIn(
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                            initialScale = 0.85f
+                        )
+                    ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -145,6 +197,7 @@ fun SearchScreen(
                             )
                         }
                     }
+                    } // end AnimatedVisibility (empty state)
                 }
 
                 uiState.results.isEmpty() -> {

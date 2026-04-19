@@ -181,7 +181,8 @@ fun MonospaceNavGraph(
                 },
                 onNavigateToCreateTask = {
                     navController.navigate(Screen.Home.BASE)
-                }
+                },
+                onClose = { navController.popBackStack() }
             )
         }
         composable(

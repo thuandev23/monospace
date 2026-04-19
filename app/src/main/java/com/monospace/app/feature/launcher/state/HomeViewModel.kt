@@ -434,8 +434,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun rescheduleOverdueTasks(newDate: LocalDate) {
+        viewModelScope.launch {
+            try {
+                val nowMs = System.currentTimeMillis()
+                val newInstant = newDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                val overdue = (uiState.value as? HomeUiState.Success)?.tasks
+                    ?.filter { it.status != TaskStatus.DONE && it.startDateTime != null && it.startDateTime.toEpochMilli() < nowMs }
+                    ?: return@launch
+                overdue.forEach { task ->
+                    updateTaskUseCase(task.copy(startDateTime = newInstant, isAllDay = true))
+                }
+            } catch (e: Exception) {
+                _errorEvent.emit("Không thể reschedule: ${e.message}")
+            }
+        }
+    }
+
     fun setViewSettings(settings: ViewSettings) {
         viewModelScope.launch {
+            if (!settings.showPriority) _priorityFilter.value = null
             settingsDataStore.setViewSettings(settings)
         }
     }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.GroupOption
 import com.monospace.app.core.domain.model.SecondStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskAlignment
@@ -75,53 +77,117 @@ fun TaskList(
     onTaskSwipeDelete: (String) -> Unit = {},
     displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
     reverseLayout: Boolean = false,
-    onTaskStatusChange: ((String, TaskStatus) -> Unit)? = null
+    onTaskStatusChange: ((String, TaskStatus) -> Unit)? = null,
+    groupBy: GroupOption = GroupOption.DEFAULT,
+    listNameMap: Map<String, String> = emptyMap()
 ) {
+    val allTasks = activeTasks + completedTasks
+
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(bottom = 100.dp),
         reverseLayout = reverseLayout
     ) {
-        items(items = activeTasks, key = { it.id }) { task ->
-            SwipeableTaskItem(
-                task = task,
-                isSelected = selectedTaskIds.contains(task.id),
-                isSelectionMode = isSelectionMode,
-                onToggle = { onTaskToggle(task.id, it) },
-                onClick = { onTaskClick(task) },
-                onLongClick = { onTaskLongClick(task) },
-                onSwipeComplete = { onTaskToggle(task.id, true) },
-                onSwipeDelete = { onTaskSwipeDelete(task.id) },
-                displaySettings = displaySettings,
-                onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
-                modifier = Modifier.animateItem()
-            )
-        }
-
-        if (activeTasks.isNotEmpty() && completedTasks.isNotEmpty()) {
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    thickness = 0.5.dp,
-                    color = FocusTheme.colors.divider
-                )
+        when (groupBy) {
+            GroupOption.NONE -> {
+                items(items = allTasks, key = { it.id }) { task ->
+                    SwipeableTaskItem(
+                        task = task,
+                        isSelected = selectedTaskIds.contains(task.id),
+                        isSelectionMode = isSelectionMode,
+                        onToggle = { onTaskToggle(task.id, it) },
+                        onClick = { onTaskClick(task) },
+                        onLongClick = { onTaskLongClick(task) },
+                        onSwipeComplete = { onTaskToggle(task.id, task.status == TaskStatus.DONE) },
+                        onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                        displaySettings = displaySettings,
+                        listNameMap = listNameMap,
+                        onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
+                        modifier = Modifier.animateItem()
+                    )
+                }
             }
-        }
 
-        items(items = completedTasks, key = { it.id }) { task ->
-            SwipeableTaskItem(
-                task = task,
-                isSelected = selectedTaskIds.contains(task.id),
-                isSelectionMode = isSelectionMode,
-                onToggle = { onTaskToggle(task.id, it) },
-                onClick = { onTaskClick(task) },
-                onLongClick = { onTaskLongClick(task) },
-                onSwipeComplete = { onTaskToggle(task.id, false) },
-                onSwipeDelete = { onTaskSwipeDelete(task.id) },
-                displaySettings = displaySettings,
-                onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
-                modifier = Modifier.animateItem()
-            )
+            GroupOption.DEFAULT -> {
+                items(items = activeTasks, key = { it.id }) { task ->
+                    SwipeableTaskItem(
+                        task = task,
+                        isSelected = selectedTaskIds.contains(task.id),
+                        isSelectionMode = isSelectionMode,
+                        onToggle = { onTaskToggle(task.id, it) },
+                        onClick = { onTaskClick(task) },
+                        onLongClick = { onTaskLongClick(task) },
+                        onSwipeComplete = { onTaskToggle(task.id, true) },
+                        onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                        displaySettings = displaySettings,
+                        listNameMap = listNameMap,
+                        onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+                if (activeTasks.isNotEmpty() && completedTasks.isNotEmpty()) {
+                    item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 24.dp),
+                            thickness = 0.5.dp,
+                            color = FocusTheme.colors.divider
+                        )
+                    }
+                }
+                items(items = completedTasks, key = { it.id }) { task ->
+                    SwipeableTaskItem(
+                        task = task,
+                        isSelected = selectedTaskIds.contains(task.id),
+                        isSelectionMode = isSelectionMode,
+                        onToggle = { onTaskToggle(task.id, it) },
+                        onClick = { onTaskClick(task) },
+                        onLongClick = { onTaskLongClick(task) },
+                        onSwipeComplete = { onTaskToggle(task.id, false) },
+                        onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                        displaySettings = displaySettings,
+                        listNameMap = listNameMap,
+                        onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+
+            GroupOption.FOLDER -> {
+                val grouped = allTasks.groupBy { it.listId }
+                grouped.forEach { (listId, tasks) ->
+                    val folderName = listNameMap[listId] ?: listId
+                    item(key = "header_$listId") {
+                        Text(
+                            text = folderName,
+                            style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary),
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                        )
+                    }
+                    items(items = tasks, key = { it.id }) { task ->
+                        SwipeableTaskItem(
+                            task = task,
+                            isSelected = selectedTaskIds.contains(task.id),
+                            isSelectionMode = isSelectionMode,
+                            onToggle = { onTaskToggle(task.id, it) },
+                            onClick = { onTaskClick(task) },
+                            onLongClick = { onTaskLongClick(task) },
+                            onSwipeComplete = { onTaskToggle(task.id, task.status == TaskStatus.DONE) },
+                            onSwipeDelete = { onTaskSwipeDelete(task.id) },
+                            displaySettings = displaySettings,
+                            listNameMap = emptyMap(),
+                            onStatusChange = onTaskStatusChange?.let { cb -> { s -> cb(task.id, s) } },
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+                    item(key = "divider_$listId") {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            thickness = 0.5.dp,
+                            color = FocusTheme.colors.divider
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -138,10 +204,10 @@ fun SwipeableTaskItem(
     onSwipeComplete: () -> Unit,
     onSwipeDelete: () -> Unit,
     displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
+    listNameMap: Map<String, String> = emptyMap(),
     onStatusChange: ((TaskStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    // Không cho swipe khi đang ở selection mode
     if (isSelectionMode) {
         TaskItem(
             task,
@@ -151,6 +217,7 @@ fun SwipeableTaskItem(
             onClick,
             onLongClick,
             displaySettings,
+            listNameMap,
             onStatusChange,
             modifier
         )
@@ -225,6 +292,7 @@ fun SwipeableTaskItem(
             onClick,
             onLongClick,
             displaySettings,
+            listNameMap,
             onStatusChange
         )
     }
@@ -240,6 +308,7 @@ fun TaskItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     displaySettings: TaskDisplaySettings = TaskDisplaySettings(),
+    listNameMap: Map<String, String> = emptyMap(),
     onStatusChange: ((TaskStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -298,35 +367,47 @@ fun TaskItem(
                 )
             )
 
-            // Dòng thông tin bổ sung: Ngày giờ, Nhắc nhở, Lặp lại
             if (task.status != TaskStatus.DONE) {
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Hiển thị Ngày/Giờ
-                    task.startDateTime?.let {
-                        InfoTag(
-                            icon = Icons.Default.Schedule,
-                            text = formatInstant(it, task.isAllDay)
-                        )
-                    }
-
-                    // Hiển thị Nhắc nhở
-                    task.reminder?.let {
-                        InfoTag(
-                            icon = Icons.Default.Notifications,
-                            text = "${it.value} ${it.unit.name.lowercase()}"
-                        )
-                    }
-
-                    // Hiển thị Lặp lại
-                    task.repeat?.let {
-                        InfoTag(
-                            icon = Icons.Default.Repeat,
-                            text = it.unit.name.lowercase()
-                        )
+                val hasMetadata = (displaySettings.showTime && task.startDateTime != null)
+                    || task.reminder != null || task.repeat != null
+                    || (displaySettings.showFolder && listNameMap.containsKey(task.listId))
+                if (hasMetadata) {
+                    Row(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (displaySettings.showTime) {
+                            task.startDateTime?.let {
+                                val isOverdue = it.toEpochMilli() < System.currentTimeMillis()
+                                InfoTag(
+                                    icon = Icons.Default.Schedule,
+                                    text = formatInstant(it, task.isAllDay),
+                                    tint = if (isOverdue) androidx.compose.ui.graphics.Color.Red.copy(alpha = 0.8f)
+                                           else FocusTheme.colors.secondary
+                                )
+                            }
+                        }
+                        task.reminder?.let {
+                            InfoTag(
+                                icon = Icons.Default.Notifications,
+                                text = "${it.value} ${it.unit.name.lowercase()}"
+                            )
+                        }
+                        task.repeat?.let {
+                            InfoTag(
+                                icon = Icons.Default.Repeat,
+                                text = it.unit.name.lowercase()
+                            )
+                        }
+                        if (displaySettings.showFolder) {
+                            listNameMap[task.listId]?.let { name ->
+                                InfoTag(
+                                    icon = Icons.Default.Folder,
+                                    text = name
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -335,19 +416,23 @@ fun TaskItem(
 }
 
 @Composable
-fun InfoTag(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+fun InfoTag(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    tint: androidx.compose.ui.graphics.Color = FocusTheme.colors.secondary
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(14.dp),
-            tint = FocusTheme.colors.secondary
+            tint = tint
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
             style = FocusTheme.typography.caption.copy(
-                color = FocusTheme.colors.secondary,
+                color = tint,
                 fontSize = 11.sp
             )
         )

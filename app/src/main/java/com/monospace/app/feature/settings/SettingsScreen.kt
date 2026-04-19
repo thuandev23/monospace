@@ -1,5 +1,9 @@
 package com.monospace.app.feature.settings
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,53 +28,61 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tab
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 import java.util.Calendar
+import kotlin.math.roundToInt
 
 // ─── SettingItem: onClick nullable → không hiện arrow nếu null ───────────────
 
@@ -100,6 +113,7 @@ fun SettingsScreen(
     var isEditMode by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+    var showSettingsSheet by remember { mutableStateOf(false) }
 
     val savedOrder by viewModel.sidebarItemOrder.collectAsState()
     val savedHidden by viewModel.sidebarHiddenItems.collectAsState()
@@ -198,6 +212,8 @@ fun SettingsScreen(
         } else if (savedHidden.isNotEmpty()) {
             mainItems = mainItems.map { it.copy(isVisible = it.id !in savedHidden) }
         }
+        reminderItems = reminderItems.map { it.copy(isVisible = it.id !in savedHidden) }
+        notionItems = notionItems.map { it.copy(isVisible = it.id !in savedHidden) }
     }
 
     fun <T> List<T>.move(from: Int, to: Int): List<T> {
@@ -269,6 +285,17 @@ fun SettingsScreen(
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         } else {
+                            IconButton(
+                                onClick = { showSettingsSheet = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = null,
+                                    tint = FocusTheme.colors.secondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Box {
                                 IconButton(
                                     onClick = { showMoreMenu = true },
@@ -310,11 +337,6 @@ fun SettingsScreen(
                                             onClick = { showMoreMenu = false; showAddFolderDialog = true }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.label_new_list), style = FocusTheme.typography.body) },
-                                            leadingIcon = { ListIcon() },
-                                            onClick = { showMoreMenu = false; onNavigateToLists() }
-                                        )
-                                        DropdownMenuItem(
                                             text = { Text(stringResource(R.string.label_new_workspace), style = FocusTheme.typography.body) },
                                             leadingIcon = { NotionIcon(size = 20.dp) },
                                             onClick = { showMoreMenu = false }
@@ -354,61 +376,6 @@ fun SettingsScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pro upgrade banner
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(FocusTheme.colors.primary)
-                    .clickable { onNavigateToProUpgrade() }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        "Monospace Pro",
-                        style = FocusTheme.typography.body.copy(
-                            color = FocusTheme.colors.background,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                    )
-                    Text(
-                        "7 days left in trial",
-                        style = FocusTheme.typography.caption.copy(
-                            color = FocusTheme.colors.background.copy(alpha = 0.7f),
-                            fontSize = 12.sp
-                        )
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(FocusTheme.colors.background.copy(alpha = 0.15f))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Star,
-                        null,
-                        tint = FocusTheme.colors.background,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        "Upgrade",
-                        style = FocusTheme.typography.label.copy(
-                            color = FocusTheme.colors.background,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Main Tasks Section
             Surface(
                 color = FocusTheme.colors.surface,
@@ -416,35 +383,50 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
-                    val itemsToRender =
-                        if (isEditMode) mainItems else mainItems.filter { it.isVisible }
+                    val itemsToRender = if (isEditMode) mainItems else mainItems.filter { it.isVisible }
+                    var draggingMainIdx by remember { mutableStateOf(-1) }
+                    var draggingMainOffset by remember { mutableStateOf(0f) }
+                    val rowHeightPx = with(LocalDensity.current) { 72.dp.toPx() }
+                    val targetMainIdx = if (draggingMainIdx >= 0)
+                        (draggingMainIdx + (draggingMainOffset / rowHeightPx).roundToInt())
+                            .coerceIn(0, itemsToRender.lastIndex)
+                    else -1
+
                     itemsToRender.forEachIndexed { index, item ->
                         if (isEditMode) {
-                            var accumulatedDrag by remember { mutableStateOf(0f) }
-                            val threshold = with(LocalDensity.current) { 56.dp.toPx() }
-
+                            val translationTarget = when {
+                                index == draggingMainIdx -> draggingMainOffset
+                                draggingMainIdx < targetMainIdx && index in (draggingMainIdx + 1)..targetMainIdx -> -rowHeightPx
+                                draggingMainIdx > targetMainIdx && targetMainIdx >= 0 && index in targetMainIdx until draggingMainIdx -> rowHeightPx
+                                else -> 0f
+                            }
+                            val animatedTranslation by animateFloatAsState(
+                                targetValue = translationTarget,
+                                animationSpec = if (index == draggingMainIdx) snap() else spring(stiffness = Spring.StiffnessMedium),
+                                label = "main_drag_$index"
+                            )
                             EditListItemRow(
                                 item = item,
+                                dragOffsetY = animatedTranslation,
+                                isDragging = draggingMainIdx == index,
                                 onToggleVisibility = {
                                     mainItems = mainItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
                                     viewModel.saveHiddenItems(mainItems.filter { !it.isVisible }.map { it.id }.toSet())
                                 },
-                                onDrag = { deltaY ->
-                                    accumulatedDrag += deltaY
-                                    if (accumulatedDrag > threshold && index < mainItems.size - 1) {
-                                        mainItems = mainItems.move(index, index + 1)
-                                        accumulatedDrag = 0f
-                                        viewModel.saveItemOrder(mainItems.map { it.id })
-                                    } else if (accumulatedDrag < -threshold && index > 0) {
-                                        mainItems = mainItems.move(index, index - 1)
-                                        accumulatedDrag = 0f
+                                onDragStart = { draggingMainIdx = index; draggingMainOffset = 0f },
+                                onDrag = { deltaY -> draggingMainOffset += deltaY },
+                                onDragEnd = {
+                                    val from = draggingMainIdx
+                                    val to = targetMainIdx
+                                    if (from >= 0 && from != to) {
+                                        mainItems = mainItems.move(from, to)
                                         viewModel.saveItemOrder(mainItems.map { it.id })
                                     }
-                                },
-                                onDragEnd = { accumulatedDrag = 0f }
+                                    draggingMainIdx = -1
+                                    draggingMainOffset = 0f
+                                }
                             )
                         } else {
-                            // Main section items are display-only in view mode (sidebar customization)
                             SettingItem(icon = item.icon, title = item.title)
                         }
                         if (index < itemsToRender.size - 1) {
@@ -474,33 +456,48 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
-                    val itemsToRender =
-                        if (isEditMode) editFolderItems else folderItems.filter { it.isVisible }
+                    val itemsToRender = if (isEditMode) editFolderItems else folderItems.filter { it.isVisible }
+                    var draggingFolderIdx by remember { mutableStateOf(-1) }
+                    var draggingFolderOffset by remember { mutableStateOf(0f) }
+                    val folderRowHeightPx = with(LocalDensity.current) { 72.dp.toPx() }
+                    val targetFolderIdx = if (draggingFolderIdx >= 0)
+                        (draggingFolderIdx + (draggingFolderOffset / folderRowHeightPx).roundToInt())
+                            .coerceIn(0, itemsToRender.lastIndex)
+                    else -1
+
                     itemsToRender.forEachIndexed { index, item ->
                         if (isEditMode) {
-                            var accumulatedDrag by remember { mutableStateOf(0f) }
-                            val threshold = with(LocalDensity.current) { 56.dp.toPx() }
-
+                            val translationTarget = when {
+                                index == draggingFolderIdx -> draggingFolderOffset
+                                draggingFolderIdx < targetFolderIdx && index in (draggingFolderIdx + 1)..targetFolderIdx -> -folderRowHeightPx
+                                draggingFolderIdx > targetFolderIdx && targetFolderIdx >= 0 && index in targetFolderIdx until draggingFolderIdx -> folderRowHeightPx
+                                else -> 0f
+                            }
+                            val animatedTranslation by animateFloatAsState(
+                                targetValue = translationTarget,
+                                animationSpec = if (index == draggingFolderIdx) snap() else spring(stiffness = Spring.StiffnessMedium),
+                                label = "folder_drag_$index"
+                            )
                             EditListItemRow(
                                 item = item,
+                                dragOffsetY = animatedTranslation,
+                                isDragging = draggingFolderIdx == index,
                                 onToggleVisibility = {
-                                    editFolderItems =
-                                        editFolderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                    editFolderItems = editFolderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
                                 },
-                                onDrag = { deltaY ->
-                                    accumulatedDrag += deltaY
-                                    if (accumulatedDrag > threshold && index < editFolderItems.size - 1) {
-                                        editFolderItems = editFolderItems.move(index, index + 1)
-                                        accumulatedDrag = 0f
-                                    } else if (accumulatedDrag < -threshold && index > 0) {
-                                        editFolderItems = editFolderItems.move(index, index - 1)
-                                        accumulatedDrag = 0f
+                                onDragStart = { draggingFolderIdx = index; draggingFolderOffset = 0f },
+                                onDrag = { deltaY -> draggingFolderOffset += deltaY },
+                                onDragEnd = {
+                                    val from = draggingFolderIdx
+                                    val to = targetFolderIdx
+                                    if (from >= 0 && from != to) {
+                                        editFolderItems = editFolderItems.move(from, to)
                                     }
-                                },
-                                onDragEnd = { accumulatedDrag = 0f }
+                                    draggingFolderIdx = -1
+                                    draggingFolderOffset = 0f
+                                }
                             )
                         } else {
-                            // Folder items are display-only in view mode
                             SettingItem(icon = item.icon, title = item.title)
                         }
                         if (index < itemsToRender.size - 1) {
@@ -517,157 +514,212 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Reminders Section
-            SectionHeader(title = stringResource(R.string.label_section_reminders))
-            Surface(
-                color = FocusTheme.colors.surface,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    val itemsToRender =
-                        if (isEditMode) reminderItems else reminderItems.filter { it.isVisible }
-                    itemsToRender.forEachIndexed { index, item ->
-                        if (isEditMode) {
-                            EditListItemRow(
-                                item = item,
-                                onToggleVisibility = {
-                                    reminderItems =
-                                        reminderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
-                                }
-                            )
-                        } else {
-                            SettingItem(
-                                icon = item.icon,
-                                title = item.title,
-                                onClick = if (isPro) onNavigateToReminders else onNavigateToProUpgrade
-                            )
+            // Reminders Section — hide entirely when all items hidden (non-edit mode)
+            val reminderItemsToRender = if (isEditMode) reminderItems else reminderItems.filter { it.isVisible }
+            if (isEditMode || reminderItemsToRender.isNotEmpty()) {
+                SectionHeader(title = stringResource(R.string.label_section_reminders))
+                Surface(
+                    color = FocusTheme.colors.surface,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        reminderItemsToRender.forEachIndexed { index, item ->
+                            if (isEditMode) {
+                                EditListItemRow(
+                                    item = item,
+                                    onToggleVisibility = {
+                                        val updated = reminderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                        reminderItems = updated
+                                        val allHidden = (mainItems.filter { !it.isVisible } + updated.filter { !it.isVisible } + notionItems.filter { !it.isVisible }).map { it.id }.toSet()
+                                        viewModel.saveHiddenItems(allHidden)
+                                    }
+                                )
+                            } else {
+                                SettingItem(
+                                    icon = item.icon,
+                                    title = item.title,
+                                    onClick = if (isPro) onNavigateToReminders else onNavigateToProUpgrade
+                                )
+                            }
+                            if (index < reminderItemsToRender.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = if (isEditMode) 96.dp else 56.dp, end = 16.dp),
+                                    color = FocusTheme.colors.divider.copy(alpha = 0.3f)
+                                )
+                            }
                         }
-                        if (index < itemsToRender.size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(
-                                    start = if (isEditMode) 96.dp else 56.dp,
-                                    end = 16.dp
-                                ), color = FocusTheme.colors.divider.copy(alpha = 0.3f)
-                            )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            // Notion Section — hide entirely when all items hidden (non-edit mode)
+            val notionItemsToRender = if (isEditMode) notionItems else notionItems.filter { it.isVisible }
+            if (isEditMode || notionItemsToRender.isNotEmpty()) {
+                SectionHeader(title = stringResource(R.string.label_section_notion))
+                Surface(
+                    color = FocusTheme.colors.surface,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        notionItemsToRender.forEachIndexed { index, item ->
+                            if (isEditMode) {
+                                EditListItemRow(
+                                    item = item,
+                                    onToggleVisibility = {
+                                        val updated = notionItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
+                                        notionItems = updated
+                                        val allHidden = (mainItems.filter { !it.isVisible } + reminderItems.filter { !it.isVisible } + updated.filter { !it.isVisible }).map { it.id }.toSet()
+                                        viewModel.saveHiddenItems(allHidden)
+                                    }
+                                )
+                            } else {
+                                SettingItem(
+                                    icon = item.icon,
+                                    title = item.title,
+                                    onClick = if (isPro) onNavigateToNotion else onNavigateToProUpgrade
+                                )
+                            }
+                            if (index < notionItemsToRender.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = if (isEditMode) 96.dp else 56.dp, end = 16.dp),
+                                    color = FocusTheme.colors.divider.copy(alpha = 0.3f)
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(64.dp))
+        }
+    }
 
-            // Task Default Section
-            SectionHeader(title = "Task Default")
-            Surface(
-                color = FocusTheme.colors.surface,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
+    if (showSettingsSheet) {
+        AppSettingsSheet(
+            isPro = isPro,
+            onDismiss = { showSettingsSheet = false },
+            onNavigateToProUpgrade = { showSettingsSheet = false; onNavigateToProUpgrade() },
+            onNavigateToTaskDefault = { showSettingsSheet = false; onNavigateToTaskDefault() },
+            onNavigateToFocus = { showSettingsSheet = false; onNavigateToFocus() },
+            onNavigateToTabBar = { showSettingsSheet = false; onNavigateToTabBar() },
+            onNavigateToGeneral = { showSettingsSheet = false; onNavigateToGeneral() },
+            onNavigateToWallpaper = { showSettingsSheet = false; if (isPro) onNavigateToWallpaper() else onNavigateToProUpgrade() },
+            onNavigateToAbout = { showSettingsSheet = false; onNavigateToAbout() },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppSettingsSheet(
+    isPro: Boolean,
+    onDismiss: () -> Unit,
+    onNavigateToProUpgrade: () -> Unit,
+    onNavigateToTaskDefault: () -> Unit,
+    onNavigateToFocus: () -> Unit,
+    onNavigateToTabBar: () -> Unit,
+    onNavigateToGeneral: () -> Unit,
+    onNavigateToWallpaper: () -> Unit,
+    onNavigateToAbout: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = FocusTheme.colors.background,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                SettingItem(
-                    icon = {
-                        Icon(
-                            Icons.AutoMirrored.Filled.List,
-                            null,
-                            tint = FocusTheme.colors.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    title = "Task Default",
-                    onClick = onNavigateToTaskDefault
+                Text(
+                    text = "Settings",
+                    style = FocusTheme.typography.title.copy(fontWeight = FontWeight.SemiBold)
                 )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(FocusTheme.colors.surface, CircleShape)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = null,
+                        tint = FocusTheme.colors.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Focus Mode Section
-            SectionHeader(title = stringResource(R.string.label_section_focus_mode))
-            Surface(
-                color = FocusTheme.colors.surface,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
+            // Pro upgrade banner
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(FocusTheme.colors.primary)
+                    .clickable { onNavigateToProUpgrade() }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                SettingItem(
-                    icon = {
-                        Icon(
-                            Icons.Default.Timer,
-                            null,
-                            tint = FocusTheme.colors.primary,
-                            modifier = Modifier.size(24.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Monospace Pro",
+                        style = FocusTheme.typography.body.copy(
+                            color = FocusTheme.colors.background,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
                         )
-                    },
-                    title = stringResource(R.string.label_focus_profiles),
-                    onClick = onNavigateToFocus
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Notion Section
-            SectionHeader(title = stringResource(R.string.label_section_notion))
-            Surface(
-                color = FocusTheme.colors.surface,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    val itemsToRender =
-                        if (isEditMode) notionItems else notionItems.filter { it.isVisible }
-                    itemsToRender.forEachIndexed { index, item ->
-                        if (isEditMode) {
-                            EditListItemRow(
-                                item = item,
-                                onToggleVisibility = {
-                                    notionItems =
-                                        notionItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
-                                }
+                    )
+                    Text(
+                        if (isPro) "Active" else "Buy once, lifetime update",
+                        style = FocusTheme.typography.caption.copy(
+                            color = FocusTheme.colors.background.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                    )
+                }
+                if (!isPro) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(FocusTheme.colors.background.copy(alpha = 0.15f))
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Star, null, tint = FocusTheme.colors.background, modifier = Modifier.size(14.dp))
+                        Text(
+                            "Upgrade",
+                            style = FocusTheme.typography.label.copy(
+                                color = FocusTheme.colors.background,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
                             )
-                        } else {
-                            SettingItem(
-                                icon = item.icon,
-                                title = item.title,
-                                onClick = if (isPro) onNavigateToNotion else onNavigateToProUpgrade
-                            )
-                        }
-                        if (index < itemsToRender.size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(
-                                    start = if (isEditMode) 96.dp else 56.dp,
-                                    end = 16.dp
-                                ), color = FocusTheme.colors.divider.copy(alpha = 0.3f)
-                            )
-                        }
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // General Settings Section
-            SectionHeader(title = "General")
-            Surface(
-                color = FocusTheme.colors.surface,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                SettingItem(
-                    icon = {
-                        Icon(
-                            Icons.Default.Tune,
-                            null,
-                            tint = FocusTheme.colors.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    title = "General",
-                    onClick = onNavigateToGeneral
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Appearance Section (Wallpapers + Tab Bar)
-            SectionHeader(title = "Appearance")
+            // App settings group
             Surface(
                 color = FocusTheme.colors.surface,
                 shape = RoundedCornerShape(24.dp),
@@ -675,60 +727,53 @@ fun SettingsScreen(
             ) {
                 Column {
                     SettingItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Image,
-                                null,
-                                tint = FocusTheme.colors.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        title = "Wallpapers",
-                        onClick = if (isPro) onNavigateToWallpaper else onNavigateToProUpgrade
+                        icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
+                        title = "Task Default",
+                        onClick = onNavigateToTaskDefault
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp, end = 16.dp),
-                        color = FocusTheme.colors.divider.copy(alpha = 0.3f)
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
                     SettingItem(
-                        icon = {
-                            Icon(
-                                Icons.Default.Tab,
-                                null,
-                                tint = FocusTheme.colors.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
+                        icon = { Icon(Icons.Default.Tab, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
                         title = "Tab Bar",
                         onClick = onNavigateToTabBar
                     )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
+                    SettingItem(
+                        icon = { Icon(Icons.Default.Tune, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
+                        title = "General",
+                        onClick = onNavigateToGeneral
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
+                    SettingItem(
+                        icon = { Icon(Icons.Default.Timer, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
+                        title = "Focus",
+                        onClick = onNavigateToFocus
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
+                    SettingItem(
+                        icon = { Icon(Icons.Default.Image, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
+                        title = "Wallpapers",
+                        onClick = onNavigateToWallpaper
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // About Section
-            SectionHeader(title = "Info")
+            // Info group
             Surface(
                 color = FocusTheme.colors.surface,
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 SettingItem(
-                    icon = {
-                        Icon(
-                            Icons.Default.Info,
-                            null,
-                            tint = FocusTheme.colors.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
+                    icon = { Icon(Icons.Default.Info, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
                     title = "About",
                     onClick = onNavigateToAbout
                 )
             }
 
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -767,12 +812,24 @@ fun SectionHeader(title: String, showAdd: Boolean = false, onAddClick: () -> Uni
 fun EditListItemRow(
     item: EditableListItem,
     onToggleVisibility: () -> Unit,
+    dragOffsetY: Float = 0f,
+    isDragging: Boolean = false,
+    onDragStart: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {}
 ) {
+    val latestOnDragStart by rememberUpdatedState(onDragStart)
+    val latestOnDrag by rememberUpdatedState(onDrag)
+    val latestOnDragEnd by rememberUpdatedState(onDragEnd)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .zIndex(if (isDragging) 1f else 0f)
+            .graphicsLayer {
+                translationY = dragOffsetY
+                shadowElevation = if (isDragging) 12f else 0f
+            }
+            .background(if (isDragging) FocusTheme.colors.surface else Color.Transparent)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -827,12 +884,13 @@ fun EditListItemRow(
                     .size(20.dp)
                     .pointerInput(Unit) {
                         detectDragGesturesAfterLongPress(
+                            onDragStart = { latestOnDragStart() },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                onDrag(dragAmount.y)
+                                latestOnDrag(dragAmount.y)
                             },
-                            onDragEnd = onDragEnd,
-                            onDragCancel = onDragEnd
+                            onDragEnd = { latestOnDragEnd() },
+                            onDragCancel = { latestOnDragEnd() }
                         )
                     }
             )

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -277,6 +278,12 @@ fun ViewOptionsBottomSheet(
             label = "Folder",
             checked = draft.showFolder,
             onToggle = { draft = draft.copy(showFolder = it) }
+        )
+        ViewToggleRow(
+            icon = Icons.Default.Flag,
+            label = "Priority filter",
+            checked = draft.showPriority,
+            onToggle = { draft = draft.copy(showPriority = it) }
         )
 
         Spacer(modifier = Modifier.height(16.dp))

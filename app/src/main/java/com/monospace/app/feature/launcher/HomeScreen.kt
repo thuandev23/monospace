@@ -1,9 +1,11 @@
 package com.monospace.app.feature.launcher
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
@@ -64,6 +67,7 @@ import com.monospace.app.feature.launcher.components.HomeTopBar
 import com.monospace.app.feature.launcher.components.LauncherShortcutsSection
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
 import com.monospace.app.feature.launcher.components.MoveToFolderSheet
+import com.monospace.app.feature.launcher.components.OverdueRescheduleSheet
 import com.monospace.app.feature.launcher.components.RescheduleSheet
 import com.monospace.app.feature.launcher.components.SelectionActionBar
 import com.monospace.app.feature.launcher.components.TaskList
@@ -71,6 +75,7 @@ import com.monospace.app.feature.launcher.state.HomeUiState
 import com.monospace.app.feature.launcher.state.HomeViewModel
 import com.monospace.app.ui.theme.FocusTheme
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -128,6 +133,7 @@ fun HomeScreen(
             onMarkSelectedDone = viewModel::markSelectedTasksDone,
             onMoveSelectedToList = viewModel::moveSelectedTasksToList,
             onRescheduleSelected = viewModel::rescheduleSelectedTasks,
+            onRescheduleOverdue = viewModel::rescheduleOverdueTasks,
             onNavigateToTask = onNavigateToTask,
             onNavigateToLists = onNavigateToLists,
             initialShowSearch = initialShowSearch,
@@ -172,6 +178,7 @@ fun HomeScreenContent(
     onMarkSelectedDone: () -> Unit = {},
     onMoveSelectedToList: (String) -> Unit = {},
     onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
+    onRescheduleOverdue: (LocalDate) -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
@@ -257,6 +264,7 @@ fun HomeScreenContent(
                         onMarkSelectedDone = onMarkSelectedDone,
                         onMoveSelectedToList = onMoveSelectedToList,
                         onRescheduleSelected = onRescheduleSelected,
+                        onRescheduleOverdue = onRescheduleOverdue,
                         onNavigateToTask = onNavigateToTask,
                         onNavigateToLists = onNavigateToLists,
                         initialShowSearch = initialShowSearch,
@@ -385,6 +393,7 @@ private fun SuccessContent(
     onMarkSelectedDone: () -> Unit = {},
     onMoveSelectedToList: (String) -> Unit = {},
     onRescheduleSelected: (java.time.Instant?, java.time.Instant?, Boolean, ReminderConfig?, RepeatConfig?) -> Unit = { _, _, _, _, _ -> },
+    onRescheduleOverdue: (LocalDate) -> Unit = {},
     onNavigateToTask: (taskId: String) -> Unit = {},
     onNavigateToLists: () -> Unit = {},
     initialShowSearch: Boolean = false,
@@ -404,8 +413,13 @@ private fun SuccessContent(
     val activeTasks = remember(state.tasks) { state.tasks.filter { it.status != TaskStatus.DONE } }
     val completedTasks =
         remember(state.tasks) { state.tasks.filter { it.status == TaskStatus.DONE } }
+    val nowMs = System.currentTimeMillis()
+    val overdueTasks = remember(state.tasks) {
+        state.tasks.filter { it.status != TaskStatus.DONE && it.startDateTime != null && it.startDateTime.toEpochMilli() < nowMs }
+    }
     var showSearchBar by remember { mutableStateOf(initialShowSearch || state.searchQuery.isNotBlank()) }
     var showFocusSheet by remember { mutableStateOf(false) }
+    var showOverdueRescheduleSheet by remember { mutableStateOf(false) }
 
     val shortcuts by launcherViewModel.shortcuts.collectAsState()
     val isEditMode by launcherViewModel.isEditMode.collectAsState()
@@ -464,6 +478,41 @@ private fun SuccessContent(
                 }
             )
 
+            // Overdue banner
+            if (overdueTasks.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${overdueTasks.size} overdue",
+                        style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.clickable { showOverdueRescheduleSheet = true }
+                    ) {
+                        Text(
+                            text = "Reschedule",
+                            style = FocusTheme.typography.caption.copy(
+                                color = androidx.compose.ui.graphics.Color(0xFFCC0000),
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                            )
+                        )
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFFCC0000),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
             // Search bar
             if (showSearchBar) {
                 TaskSearchBar(
@@ -477,30 +526,32 @@ private fun SuccessContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Priority filter chips
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(priorityChips) { (priority, label) ->
-                    val selected = state.priorityFilter == priority
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onPriorityFilterChange(priority) },
-                        label = { Text(label, style = FocusTheme.typography.caption) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = FocusTheme.colors.primary,
-                            selectedLabelColor = FocusTheme.colors.background,
-                            containerColor = FocusTheme.colors.background,
-                            labelColor = FocusTheme.colors.secondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
+            // Priority filter chips — only shown when enabled in View settings
+            if (state.viewSettings.showPriority) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(priorityChips) { (priority, label) ->
+                        val selected = state.priorityFilter == priority
+                        FilterChip(
                             selected = selected,
-                            borderColor = FocusTheme.colors.divider,
-                            selectedBorderColor = FocusTheme.colors.primary
+                            onClick = { onPriorityFilterChange(priority) },
+                            label = { Text(label, style = FocusTheme.typography.caption) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = FocusTheme.colors.primary,
+                                selectedLabelColor = FocusTheme.colors.background,
+                                containerColor = FocusTheme.colors.background,
+                                labelColor = FocusTheme.colors.secondary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selected,
+                                borderColor = FocusTheme.colors.divider,
+                                selectedBorderColor = FocusTheme.colors.primary
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -509,6 +560,13 @@ private fun SuccessContent(
                 EmptyStateTask(onCreateClick = { onShowCreateSheet(true) })
                 Spacer(modifier = Modifier.weight(1.5f))
             } else {
+                val listNameMap = remember(state.availableLists) {
+                    state.availableLists.associate { it.id to it.name }
+                }
+                val effectiveDisplaySettings = taskDisplaySettings.copy(
+                    showTime = state.viewSettings.showTime,
+                    showFolder = state.viewSettings.showFolder
+                )
                 TaskList(
                     activeTasks = activeTasks,
                     completedTasks = completedTasks,
@@ -529,9 +587,11 @@ private fun SuccessContent(
                         }
                     },
                     onTaskSwipeDelete = onDeleteTask,
-                    displaySettings = taskDisplaySettings,
+                    displaySettings = effectiveDisplaySettings,
                     reverseLayout = reverseScrollDirection,
-                    onTaskStatusChange = onSetTaskStatus
+                    onTaskStatusChange = onSetTaskStatus,
+                    groupBy = state.viewSettings.groupBy,
+                    listNameMap = listNameMap
                 )
             }
         }
@@ -561,6 +621,16 @@ private fun SuccessContent(
         ConfirmMarkDoneDialog(
             onConfirm = { onMarkSelectedDone(); showMarkDoneConfirm = false },
             onDismiss = { showMarkDoneConfirm = false }
+        )
+    }
+
+    if (showOverdueRescheduleSheet) {
+        OverdueRescheduleSheet(
+            onDismiss = { showOverdueRescheduleSheet = false },
+            onConfirm = { date ->
+                onRescheduleOverdue(date)
+                showOverdueRescheduleSheet = false
+            }
         )
     }
 

@@ -30,7 +30,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MONOSPACE">
+        android:theme="@style/Theme.MONOSPACE"
+        android:localeConfig="@xml/locale_config">
 
         <provider
             android:name="androidx.startup.InitializationProvider"
