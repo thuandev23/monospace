@@ -27,7 +27,7 @@ import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.service.AppBlockingService
 import com.monospace.app.core.service.AppBlockingState
 import com.monospace.app.core.sync.FocusScheduleEnforcer
-import com.monospace.app.widget.WidgetUpdater
+import com.monospace.app.widget.WidgetRefresher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -78,7 +78,8 @@ class FocusViewModel @Inject constructor(
     private val taskListRepo: TaskListRepository,
     private val sessionRepo: FocusSessionRepository,
     private val scheduleEnforcer: FocusScheduleEnforcer,
-    private val appRepo: AppRepository
+    private val appRepo: AppRepository,
+    private val widgetRefresher: WidgetRefresher
 ) : ViewModel() {
 
     private val _showCreateSheet = MutableStateFlow(false)
@@ -275,7 +276,7 @@ class FocusViewModel @Inject constructor(
         AppBlockingState.reset()
         _timerState.update { it.copy(isRunning = true, isFinished = false, remainingSeconds = it.durationMinutes * 60L) }
         timerJob = viewModelScope.launch {
-            WidgetUpdater.updateAll(context)
+            widgetRefresher.refresh()
             while (_timerState.value.remainingSeconds > 0) {
                 delay(1000L)
                 _timerState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
@@ -287,7 +288,7 @@ class FocusViewModel @Inject constructor(
             val profileId = uiState.value.activeProfile?.id
             sessionRepo.recordSession(durationMinutes, profileId)
             sendSessionCompleteNotification()
-            WidgetUpdater.updateAll(context)
+            widgetRefresher.refresh()
         }
         val activeProfile = uiState.value.activeProfile
         if (activeProfile != null && activeProfile.allowedAppIds.isNotEmpty() && checkUsagePermission()) {
@@ -303,7 +304,7 @@ class FocusViewModel @Inject constructor(
         }
         AppBlockingService.stop(context)
         AppBlockingState.reset()
-        viewModelScope.launch { WidgetUpdater.updateAll(context) }
+        widgetRefresher.refresh()
     }
 
     fun stopFocusAndDeactivate() {

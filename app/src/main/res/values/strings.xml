@@ -135,4 +135,7 @@
     <string name="permission_banner_overlay_title">Quyền hiển thị trên cùng</string>
     <string name="permission_banner_overlay_desc">Cần quyền này để tự động chặn ứng dụng sau 5 giây cảnh báo.</string>
     <string name="action_grant_now">Cấp quyền ngay</string>
+
+    <!-- Live Wallpaper -->
+    <string name="live_wallpaper_description">Minimal canvas with time, tasks &amp; shortcuts</string>
 </resources>

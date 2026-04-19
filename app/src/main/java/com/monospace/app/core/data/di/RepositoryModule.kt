@@ -12,6 +12,8 @@ import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.SyncQueue
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.domain.repository.TaskRepository
+import com.monospace.app.widget.WidgetRefresher
+import com.monospace.app.widget.WidgetRefresherImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -57,4 +59,10 @@ abstract class RepositoryModule {
     abstract fun bindFocusSessionRepository(
         focusSessionRepositoryImpl: FocusSessionRepositoryImpl
     ): FocusSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWidgetRefresher(
+        widgetRefresherImpl: WidgetRefresherImpl
+    ): WidgetRefresher
 }

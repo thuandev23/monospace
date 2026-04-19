@@ -69,6 +69,7 @@ class SettingsDataStore @Inject constructor(
 
         // Wallpaper
         private val KEY_WALLPAPER_CONFIG = stringPreferencesKey("wallpaper_config")
+
     }
 
     // --- Default List ---
@@ -296,4 +297,5 @@ class SettingsDataStore @Inject constructor(
     suspend fun setWallpaperConfig(config: WallpaperConfig) {
         context.dataStore.edit { it[KEY_WALLPAPER_CONFIG] = gson.toJson(config) }
     }
+
 }

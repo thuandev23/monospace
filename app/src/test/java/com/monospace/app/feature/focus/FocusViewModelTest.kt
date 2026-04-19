@@ -1,6 +1,14 @@
 package com.monospace.app.feature.focus
 
+import android.app.AppOpsManager
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Process
+import android.provider.Settings
+import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.FocusSchedule
 import com.monospace.app.core.domain.model.TaskList
@@ -9,11 +17,15 @@ import com.monospace.app.core.domain.repository.FocusProfileRepository
 import com.monospace.app.core.domain.repository.FocusSessionRepository
 import com.monospace.app.core.domain.repository.TaskListRepository
 import com.monospace.app.core.sync.FocusScheduleEnforcer
+import com.monospace.app.widget.WidgetRefresher
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,18 +69,48 @@ class FocusViewModelTest {
     private val appRepo: AppRepository = mockk(relaxed = true) {
         every { getInstalledApps() } returns emptyList()
     }
-    private val context: Context = mockk(relaxed = true)
+    private val widgetRefresher: WidgetRefresher = mockk(relaxed = true)
+    private val appOpsManager: AppOpsManager = mockk(relaxed = true) {
+        every { unsafeCheckOpNoThrow(any(), any(), any()) } returns AppOpsManager.MODE_DEFAULT
+        @Suppress("DEPRECATION")
+        every { checkOpNoThrow(any(), any(), any()) } returns AppOpsManager.MODE_DEFAULT
+    }
+    private val notificationManager: NotificationManager = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true) {
+        every { getSystemService(Context.APP_OPS_SERVICE) } returns appOpsManager
+        every { getSystemService(NotificationManager::class.java) } returns notificationManager
+        every { packageName } returns "com.monospace.app"
+    }
 
     private lateinit var viewModel: FocusViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FocusViewModel(context, focusRepo, taskListRepo, sessionRepo, scheduleEnforcer, appRepo)
+        mockkStatic(Settings::class, Log::class, PendingIntent::class, Process::class)
+        mockkConstructor(Intent::class, NotificationCompat.Builder::class)
+        every { Settings.canDrawOverlays(any()) } returns false
+        every { Process.myUid() } returns 0
+        every { Log.d(any(), any()) } returns 0
+        every { anyConstructed<Intent>().setFlags(any()) } returns mockk(relaxed = true)
+        every { anyConstructed<Intent>().addFlags(any()) } returns mockk(relaxed = true)
+        every { PendingIntent.getActivity(any(), any(), any(), any()) } returns mockk(relaxed = true)
+        val notifBuilderMock = mockk<NotificationCompat.Builder>(relaxed = true)
+        every { anyConstructed<NotificationCompat.Builder>().setSmallIcon(any<Int>()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setContentTitle(any()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setContentText(any()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setPriority(any()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setCategory(any()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setAutoCancel(any()) } returns notifBuilderMock
+        every { anyConstructed<NotificationCompat.Builder>().setContentIntent(any()) } returns notifBuilderMock
+        viewModel = FocusViewModel(context, focusRepo, taskListRepo, sessionRepo, scheduleEnforcer, appRepo, widgetRefresher)
     }
 
     @After
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() {
+        Dispatchers.resetMain()
+        unmockkAll()
+    }
 
     private fun profile(id: String = "fp-1", name: String = "Work") =
         FocusProfile(id = id, name = name)

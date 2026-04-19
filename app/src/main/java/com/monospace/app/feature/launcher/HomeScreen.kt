@@ -1,14 +1,5 @@
 package com.monospace.app.feature.launcher
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,11 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -48,20 +37,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.monospace.app.feature.settings.WallpaperCanvas
 import com.monospace.app.R
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
@@ -105,20 +90,6 @@ fun HomeScreen(
     val effectiveDisplaySettings = taskDisplaySettings.copy(secondStatus = generalSettings.secondStatus)
     val snackbarHostState = remember { SnackbarHostState() }
     var snackbarIsError by remember { mutableStateOf(true) }
-
-    val wallpaperConfig by viewModel.wallpaperConfig.collectAsState()
-    val wallpaperTasks by viewModel.wallpaperTasks.collectAsState()
-    var showLauncher by remember { mutableStateOf(false) }
-    var dragAccumulator by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(wallpaperConfig.showOnHome) {
-        if (!wallpaperConfig.showOnHome) showLauncher = true
-    }
-
-    BackHandler(enabled = wallpaperConfig.showOnHome && showLauncher) {
-        showLauncher = false
-    }
-
     LaunchedEffect(Unit) {
         viewModel.errorEvent.collect { message ->
             snackbarIsError = true
@@ -174,53 +145,6 @@ fun HomeScreen(
             reverseScrollDirection = generalSettings.reverseScrollDirection,
             onSetTaskStatus = viewModel::setTaskStatus
         )
-
-        AnimatedVisibility(
-            visible = wallpaperConfig.showOnHome && !showLauncher,
-            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { it },
-            exit = slideOutVertically(tween(350)) { -it } + fadeOut(tween(200))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures(
-                            onDragStart = { dragAccumulator = 0f },
-                            onVerticalDrag = { _, delta ->
-                                dragAccumulator += delta
-                                if (dragAccumulator < -120f) showLauncher = true
-                            },
-                            onDragEnd = { dragAccumulator = 0f },
-                            onDragCancel = { dragAccumulator = 0f }
-                        )
-                    }
-            ) {
-                WallpaperCanvas(
-                    config = wallpaperConfig,
-                    tasks = wallpaperTasks,
-                    live = true,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(4.dp)
-                            .background(
-                                color = runCatching {
-                                    Color(android.graphics.Color.parseColor(wallpaperConfig.textColorHex))
-                                }.getOrDefault(Color.White).copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(2.dp)
-                            )
-                    )
-                }
-            }
-        }
     }
 }
 

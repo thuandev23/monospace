@@ -43,14 +43,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.app.WallpaperManager
+import android.content.ComponentName
+import android.content.Intent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.core.domain.model.WallpaperAlignment
 import com.monospace.app.core.domain.model.WallpaperConfig
+import com.monospace.app.feature.wallpaper.LiveWallpaperService
 import com.monospace.app.ui.theme.FocusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,6 +80,7 @@ fun WallpaperScreen(
 ) {
     val config by viewModel.config.collectAsState()
     val tasks by viewModel.todayTasks.collectAsState()
+    val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
     var isApplying by remember { mutableStateOf(false) }
@@ -101,25 +107,55 @@ fun WallpaperScreen(
                     }
                 },
                 actions = {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (!isApplying) FocusTheme.colors.primary else FocusTheme.colors.surface)
-                            .clickable(enabled = !isApplying) {
-                                isApplying = true
-                                viewModel.applyWallpaper()
-                            }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    Row(
+                        modifier = Modifier.padding(end = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            if (isApplying) "Applying…" else "Apply",
-                            style = FocusTheme.typography.label.copy(
-                                color = if (!isApplying) FocusTheme.colors.background else FocusTheme.colors.secondary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(FocusTheme.colors.surface)
+                                .clickable {
+                                    val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
+                                        putExtra(
+                                            WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                                            ComponentName(context, LiveWallpaperService::class.java)
+                                        )
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                }
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Text(
+                                "Live",
+                                style = FocusTheme.typography.label.copy(
+                                    color = FocusTheme.colors.primary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
                             )
-                        )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (!isApplying) FocusTheme.colors.primary else FocusTheme.colors.surface)
+                                .clickable(enabled = !isApplying) {
+                                    isApplying = true
+                                    viewModel.applyWallpaper()
+                                }
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        ) {
+                            Text(
+                                if (isApplying) "Applying…" else "Apply",
+                                style = FocusTheme.typography.label.copy(
+                                    color = if (!isApplying) FocusTheme.colors.background else FocusTheme.colors.secondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FocusTheme.colors.background)

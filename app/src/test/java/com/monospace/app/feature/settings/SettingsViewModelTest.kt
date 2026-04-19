@@ -1,5 +1,6 @@
 package com.monospace.app.feature.settings
 
+import com.monospace.app.core.billing.ProFeatureGate
 import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.domain.repository.TaskListRepository
 import io.mockk.coVerify
@@ -29,13 +30,16 @@ class SettingsViewModelTest {
     private val taskListRepo: TaskListRepository = mockk(relaxed = true) {
         every { observeAllLists() } returns MutableStateFlow(emptyList())
     }
+    private val proFeatureGate: ProFeatureGate = mockk(relaxed = true) {
+        every { isPro } returns MutableStateFlow(false)
+    }
 
     private lateinit var viewModel: SettingsViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = SettingsViewModel(dataStore, taskListRepo)
+        viewModel = SettingsViewModel(dataStore, taskListRepo, proFeatureGate)
     }
 
     @After

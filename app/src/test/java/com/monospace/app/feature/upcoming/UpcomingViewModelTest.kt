@@ -4,6 +4,8 @@ import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskStatus
+import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.TaskDisplaySettings
 import com.monospace.app.core.domain.repository.TaskRepository
 import com.monospace.app.core.domain.usecase.DeleteTaskUseCase
 import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
@@ -41,13 +43,16 @@ class UpcomingViewModelTest {
     }
     private val toggleTaskUseCase: ToggleTaskUseCase = mockk(relaxed = true)
     private val deleteTaskUseCase: DeleteTaskUseCase = mockk(relaxed = true)
+    private val settingsDataStore: SettingsDataStore = mockk(relaxed = true) {
+        every { taskDisplaySettings } returns MutableStateFlow(TaskDisplaySettings())
+    }
 
     private lateinit var viewModel: UpcomingViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = UpcomingViewModel(taskRepository, toggleTaskUseCase, deleteTaskUseCase)
+        viewModel = UpcomingViewModel(taskRepository, toggleTaskUseCase, deleteTaskUseCase, settingsDataStore)
     }
 
     @After
