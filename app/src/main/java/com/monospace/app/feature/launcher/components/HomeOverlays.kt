@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,14 +32,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DatePicker
@@ -65,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -77,6 +74,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -85,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.ReminderUnit
 import com.monospace.app.core.domain.model.RepeatConfig
@@ -107,10 +106,10 @@ fun CreateTaskSheet(
     onSave: (String) -> Unit,
     onTodayClick: () -> Unit,
     availableLists: List<TaskList> = emptyList(),
-    currentListId: String = "default",
+    currentListId: String = ListIds.DEFAULT,
     onListSelected: (String) -> Unit = {},
     draftStartDate: Instant? = null,
-    draftIsAllDay: Boolean = true
+    @Suppress("UNUSED_PARAMETER") draftIsAllDay: Boolean = true
 ) {
     val sheetState = rememberModalBottomSheetState()
     var taskTitle by remember { mutableStateOf("") }
@@ -299,7 +298,6 @@ fun MinimalCalendarDialog(
     initialReminder: ReminderConfig? = null,
     initialRepeat: RepeatConfig? = null
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val zone = ZoneId.systemDefault()
 
     // Pre-populate from existing draft when provided
@@ -320,8 +318,8 @@ fun MinimalCalendarDialog(
 
     var isTimeEnabled by remember { mutableStateOf(!initialIsAllDay) }
     var isDurationEnabled by remember { mutableStateOf(initialEnd != null) }
-    var reminderConfig by remember { mutableStateOf<ReminderConfig?>(initialReminder) }
-    var repeatConfig by remember { mutableStateOf<RepeatConfig?>(initialRepeat) }
+    var reminderConfig by remember { mutableStateOf(initialReminder) }
+    var repeatConfig by remember { mutableStateOf(initialRepeat) }
 
     // Dialog Controls
     var showDatePicker by remember { mutableStateOf(false) }
@@ -334,7 +332,7 @@ fun MinimalCalendarDialog(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = FocusTheme.colors.surfaceAlt,
         dragHandle = null,
     ) {
@@ -495,7 +493,7 @@ fun MinimalCalendarDialog(
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 color = FocusTheme.colors.divider.copy(alpha = 0.5f)
-                            )
+                                )
                             DateSettingsItem(
                                 icon = Icons.Default.Sync,
                                 label = stringResource(R.string.label_repeat),
@@ -570,7 +568,8 @@ fun MinimalCalendarDialog(
                                 endDate = s
                                 if (startDate.isAfter(endDate)) startDate = endDate
                             }
-                    }; showDatePicker = false
+                    }
+                    showDatePicker = false
                 }) { Text("OK") }
             }) { DatePicker(state = state) }
     }
@@ -593,12 +592,13 @@ fun MinimalCalendarDialog(
                 ) {
                     TextButton(onClick = {
                         showTimePicker = false
-                    }) { Text("Cancel") }; TextButton(onClick = {
+                    }) { Text(stringResource(R.string.action_cancel)) }; TextButton(onClick = {
                     val s = LocalTime.of(
                         state.hour,
                         state.minute
-                    ); if (pickingTarget == "START") startTime = s else endTime =
-                    s; showTimePicker = false
+                    )
+                    if (pickingTarget == "START") startTime = s else endTime = s
+                    showTimePicker = false
                 }) { Text("OK") }
                 }
                 }
@@ -620,25 +620,25 @@ fun ReminderSelectionDialog(
             color = FocusTheme.colors.background
         ) {
             Column(modifier = Modifier.padding(vertical = 16.dp)) {
-                ReminderOptionItem("None", onClick = { onReminderSelected(null) })
+                ReminderOptionItem(stringResource(R.string.reminder_none), onClick = { onReminderSelected(null) })
                 ReminderOptionItem(
-                    "On the day (09:00)",
+                    stringResource(R.string.reminder_on_day),
                     onClick = { onReminderSelected(ReminderConfig(0, ReminderUnit.DAY, LocalTime.of(9, 0))) }
                 )
                 ReminderOptionItem(
-                    "1 day before (09:00)",
+                    stringResource(R.string.reminder_1_day_before),
                     onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.DAY, LocalTime.of(9, 0))) }
                 )
                 ReminderOptionItem(
-                    "2 days before (09:00)",
+                    stringResource(R.string.reminder_2_days_before),
                     onClick = { onReminderSelected(ReminderConfig(2, ReminderUnit.DAY, LocalTime.of(9, 0))) }
                 )
                 ReminderOptionItem(
-                    "1 week before (09:00)",
+                    stringResource(R.string.reminder_1_week_before),
                     onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.WEEK, LocalTime.of(9, 0))) }
                 )
                 ReminderOptionItem(
-                    "1 month before (09:00)",
+                    stringResource(R.string.reminder_1_month_before),
                     onClick = { onReminderSelected(ReminderConfig(1, ReminderUnit.MONTH, LocalTime.of(9, 0))) }
                 )
                 HorizontalDivider(
@@ -668,16 +668,16 @@ fun RepeatSelectionDialog(
             color = FocusTheme.colors.background
         ) {
             Column(modifier = Modifier.padding(vertical = 16.dp)) {
-                ReminderOptionItem("None", onClick = { onRepeatSelected(null) })
-                ReminderOptionItem("Daily", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.DAY)) })
-                ReminderOptionItem("Weekly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.WEEK)) })
-                ReminderOptionItem("Monthly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.MONTH)) })
-                ReminderOptionItem("Yearly", onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.YEAR)) })
+                ReminderOptionItem(stringResource(R.string.label_none), onClick = { onRepeatSelected(null) })
+                ReminderOptionItem(stringResource(R.string.repeat_daily), onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.DAY)) })
+                ReminderOptionItem(stringResource(R.string.repeat_weekly), onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.WEEK)) })
+                ReminderOptionItem(stringResource(R.string.repeat_monthly), onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.MONTH)) })
+                ReminderOptionItem(stringResource(R.string.repeat_yearly), onClick = { onRepeatSelected(RepeatConfig(1, RepeatUnit.YEAR)) })
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
                     color = FocusTheme.colors.divider
                 )
-                ReminderOptionItem("Custom", showArrow = true, onClick = onCustomClick)
+                ReminderOptionItem(stringResource(R.string.reminder_custom), showArrow = true, onClick = onCustomClick)
             }
         }
     }
@@ -686,8 +686,13 @@ fun RepeatSelectionDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) -> Unit) {
+    val dayLabel = stringResource(R.string.label_day)
+    val weekLabel = stringResource(R.string.label_week)
+    val monthLabel = stringResource(R.string.label_month)
+    val beforeLabel = stringResource(R.string.label_before)
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var count by remember { mutableStateOf(1) }
+    var count by remember { mutableIntStateOf(1) }
     var unit by remember { mutableStateOf(ReminderUnit.DAY) }
     var time by remember { mutableStateOf(LocalTime.of(9, 0)) }
     var isBefore by remember { mutableStateOf(true) }
@@ -711,17 +716,17 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.action_cancel),
                         color = FocusTheme.colors.primary
                     )
                 }
                 Text(
-                    "Custom Reminder",
+                    stringResource(R.string.label_custom_reminder),
                     style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold)
                 )
                 TextButton(onClick = { onDone(ReminderConfig(count, unit, time, isBefore)) }) {
                     Text(
-                        "Done",
+                        stringResource(R.string.action_done),
                         color = FocusTheme.colors.primary,
                         fontWeight = FontWeight.Bold
                     )
@@ -748,16 +753,21 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                             initialIndex = 1,
                             onItemSelected = { count = it.toInt() })
                         Picker(
-                            items = ReminderUnit.entries.map {
-                                it.name.lowercase().replaceFirstChar { char -> char.uppercase() }
-                            },
+                            items = listOf(dayLabel, weekLabel, monthLabel),
                             initialIndex = 2,
-                            onItemSelected = { unit = ReminderUnit.valueOf(it.uppercase()) })
+                            onItemSelected = { 
+                                unit = when(it) {
+                                    dayLabel -> ReminderUnit.DAY
+                                    weekLabel -> ReminderUnit.WEEK
+                                    monthLabel -> ReminderUnit.MONTH
+                                    else -> ReminderUnit.DAY
+                                }
+                            })
                         
                         Picker(
-                            items = listOf("Before", "After"),
+                            items = listOf(beforeLabel, "After"),
                             initialIndex = if (isBefore) 0 else 1,
-                            onItemSelected = { isBefore = it == "Before" }
+                            onItemSelected = { isBefore = it == beforeLabel }
                         )
                     }
                     HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.5f))
@@ -769,7 +779,7 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Time", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                        Text(stringResource(R.string.label_time), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
                         Surface(
                             color = FocusTheme.colors.surfaceAlt,
                             shape = RoundedCornerShape(12.dp)
@@ -802,7 +812,7 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                     ) {
                         TextButton(onClick = {
                             showTP = false
-                        }) { Text("Cancel") }; TextButton(onClick = {
+                        }) { Text(stringResource(R.string.action_cancel)) }; TextButton(onClick = {
                         time = LocalTime.of(state.hour, state.minute); showTP = false
                     }) { Text("OK") }
                     }
@@ -816,8 +826,13 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Unit) {
+    val dayLabel = stringResource(R.string.label_day)
+    val weekLabel = stringResource(R.string.label_week)
+    val monthLabel = stringResource(R.string.label_month)
+    val yearLabel = stringResource(R.string.label_year)
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var interval by remember { mutableStateOf(1) }
+    var interval by remember { mutableIntStateOf(1) }
     var unit by remember { mutableStateOf(RepeatUnit.WEEK) }
     var selectedDays by remember { mutableStateOf(setOf<Int>()) } // Mon=1, Sun=7
 
@@ -840,12 +855,12 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.action_cancel),
                         color = FocusTheme.colors.primary
                     )
                 }
                 Text(
-                    "Custom Repeat",
+                    stringResource(R.string.label_custom_repeat),
                     style = FocusTheme.typography.headline.copy(fontWeight = FontWeight.Bold)
                 )
                 TextButton(onClick = {
@@ -856,7 +871,7 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                             if (unit == RepeatUnit.WEEK) selectedDays else null
                         )
                     )
-                }) { Text("Done", color = FocusTheme.colors.primary, fontWeight = FontWeight.Bold) }
+                }) { Text(stringResource(R.string.action_done), color = FocusTheme.colors.primary, fontWeight = FontWeight.Bold) }
             }
             Spacer(modifier = Modifier.height(32.dp))
             Surface(
@@ -875,7 +890,7 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Every",
+                            stringResource(R.string.label_every),
                             style = FocusTheme.typography.body.copy(fontWeight = FontWeight.Bold, color = FocusTheme.colors.primary)
                         )
                         Picker(
@@ -883,11 +898,17 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                             initialIndex = interval - 1,
                             onItemSelected = { interval = it.toInt() })
                         Picker(
-                            items = RepeatUnit.entries.map {
-                                it.name.lowercase().replaceFirstChar { char -> char.uppercase() }
-                            },
+                            items = listOf(dayLabel, weekLabel, monthLabel, yearLabel),
                             initialIndex = unit.ordinal,
-                            onItemSelected = { unit = RepeatUnit.valueOf(it.uppercase()) })
+                            onItemSelected = { 
+                                unit = when(it) {
+                                    dayLabel -> RepeatUnit.DAY
+                                    weekLabel -> RepeatUnit.WEEK
+                                    monthLabel -> RepeatUnit.MONTH
+                                    yearLabel -> RepeatUnit.YEAR
+                                    else -> RepeatUnit.WEEK
+                                }
+                            })
                     }
                 }
             }
@@ -907,13 +928,13 @@ fun CustomRepeatBottomSheet(onDismiss: () -> Unit, onDone: (RepeatConfig) -> Uni
                 ) {
                     Column {
                         val dayNames = listOf(
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday"
+                            stringResource(R.string.day_sunday),
+                            stringResource(R.string.day_monday),
+                            stringResource(R.string.day_tuesday),
+                            stringResource(R.string.day_wednesday),
+                            stringResource(R.string.day_thursday),
+                            stringResource(R.string.day_friday),
+                            stringResource(R.string.day_saturday)
                         )
                         dayNames.forEachIndexed { index, name ->
                             val dayIdx = if (index == 0) 7 else index // Sunday = 7, Monday = 1...
@@ -1198,26 +1219,26 @@ fun SelectionActionBar(
         ) {
             SelectionActionButton(
                 icon = Icons.Default.Folder,
-                label = "Move",
+                label = stringResource(R.string.action_move),
                 onClick = onMoveToFolder,
                 enabled = selectedCount > 0
             )
             SelectionActionButton(
                 icon = Icons.Default.DateRange,
-                label = "Reschedule",
+                label = stringResource(R.string.action_reschedule),
                 onClick = onReschedule,
                 enabled = selectedCount > 0
             )
             SelectionActionButton(
                 icon = Icons.Default.Delete,
-                label = "Delete",
+                label = stringResource(R.string.action_delete),
                 onClick = onDelete,
                 enabled = selectedCount > 0,
                 tint = FocusTheme.colors.destructive
             )
             SelectionActionButton(
                 icon = Icons.Default.Check,
-                label = "Done",
+                label = stringResource(R.string.action_done),
                 onClick = onMarkDone,
                 enabled = selectedCount > 0
             )
@@ -1227,17 +1248,17 @@ fun SelectionActionBar(
 
 @Composable
 private fun SelectionActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    tint: androidx.compose.ui.graphics.Color = FocusTheme.colors.primary
+    tint: Color = FocusTheme.colors.primary
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
@@ -1263,7 +1284,7 @@ private fun SelectionActionButton(
 fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(20.dp),
             color = FocusTheme.colors.surface,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -1273,14 +1294,14 @@ fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Are you sure? This action cannot be undone.",
+                    stringResource(R.string.msg_confirm_delete_desc),
                     style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary),
                     textAlign = TextAlign.Center
                 )
                 androidx.compose.material3.OutlinedButton(
                     onClick = onConfirm,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         contentColor = FocusTheme.colors.destructive
                     ),
@@ -1289,19 +1310,19 @@ fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                     )
                 ) {
                     Text(
-                        "Confirm Delete",
+                        stringResource(R.string.action_confirm_delete),
                         style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.destructive)
                     )
                 }
                 androidx.compose.material3.OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         contentColor = FocusTheme.colors.primary
                     )
                 ) {
-                    Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                    Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
                 }
             }
         }
@@ -1312,7 +1333,7 @@ fun ConfirmDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 fun ConfirmMarkDoneDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(20.dp),
             color = FocusTheme.colors.surface,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -1322,7 +1343,7 @@ fun ConfirmMarkDoneDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Are you sure?",
+                    stringResource(R.string.action_mark_done) + "?",
                     style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary),
                     textAlign = TextAlign.Center
                 )
@@ -1333,19 +1354,19 @@ fun ConfirmMarkDoneDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                     androidx.compose.material3.OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                        Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
                     }
                     androidx.compose.material3.Button(
                         onClick = onConfirm,
                         modifier = Modifier.weight(1f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = FocusTheme.colors.primary
                         )
                     ) {
-                        Text("Mark as Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
+                        Text(stringResource(R.string.action_mark_done), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.background))
                     }
                 }
             }
@@ -1375,17 +1396,17 @@ fun MoveToFolderSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary))
             }
-            Text("Move to", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+            Text(stringResource(R.string.label_move_to), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
             TextButton(onClick = onDismiss) {
-                Text("Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_done), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
             }
         }
         HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
 
         Text(
-            "My Folders",
+            stringResource(R.string.label_my_folders),
             style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary),
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
         )
@@ -1422,8 +1443,8 @@ fun MoveToFolderSheet(
 fun RescheduleSheet(
     onDismiss: () -> Unit,
     onConfirm: (
-        start: java.time.Instant?,
-        end: java.time.Instant?,
+        start: Instant?,
+        end: Instant?,
         isAllDay: Boolean,
         reminder: ReminderConfig?,
         repeat: RepeatConfig?
@@ -1432,7 +1453,7 @@ fun RescheduleSheet(
     MinimalCalendarDialog(
         onDismiss = onDismiss,
         onConfigSave = { startDate, startTime, endDate, endTime, reminder, repeat ->
-            val zone = java.time.ZoneId.systemDefault()
+            val zone = ZoneId.systemDefault()
             val start = if (startTime != null)
                 startDate.atTime(startTime).atZone(zone).toInstant()
             else
@@ -1478,7 +1499,7 @@ fun FocusSessionSheet(
         ) {
             // Handle + title
             Text(
-                "Focus",
+                stringResource(R.string.label_focus),
                 style = FocusTheme.typography.title.copy(
                     color = FocusTheme.colors.primary,
                     fontWeight = FontWeight.SemiBold
@@ -1512,9 +1533,9 @@ fun FocusSessionSheet(
                     )
                 }
                 FocusMode.DISPLAY_CLOCK -> {
-                    val now = java.time.LocalTime.now()
+                    val now = LocalTime.now()
                     Text(
-                        now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                        now.format(DateTimeFormatter.ofPattern("HH:mm")),
                         style = FocusTheme.typography.title.copy(fontSize = 56.sp,
                             color = FocusTheme.colors.primary
                         )
@@ -1528,7 +1549,7 @@ fun FocusSessionSheet(
             // Finished label
             if (timerState.isFinished) {
                 Text(
-                    "Session complete!",
+                    stringResource(R.string.msg_focus_complete),
                     style = FocusTheme.typography.headline.copy(
                         color = FocusTheme.colors.success
                     )
@@ -1547,7 +1568,7 @@ fun FocusSessionSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Cấp quyền Usage Access\nđể chặn ứng dụng",
+                        stringResource(R.string.permission_banner_usage_desc), // Simplified
                         style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary),
                         modifier = Modifier.weight(1f)
                     )
@@ -1558,7 +1579,7 @@ fun FocusSessionSheet(
                         }
                     ) {
                         Text(
-                            "Cấp quyền",
+                            stringResource(R.string.action_grant_now),
                             style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.primary)
                         )
                     }
@@ -1578,7 +1599,8 @@ fun FocusSessionSheet(
                 )
             ) {
                 Text(
-                    if (timerState.isRunning) "Stop Focus" else "Start Focus",
+                    if (timerState.isRunning) stringResource(R.string.action_stop_focus) 
+                    else stringResource(R.string.action_start_focus),
                     style = FocusTheme.typography.headline.copy(
                         color = FocusTheme.colors.background
                     )
@@ -1596,10 +1618,10 @@ private fun FocusModeSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val modeLabels = mapOf(
-        FocusMode.MINIMAL to "Minimal",
-        FocusMode.DISPLAY_CLOCK to "Display Clock",
-        FocusMode.STOPWATCH to "Stopwatch",
-        FocusMode.TIMER to "Timer"
+        FocusMode.MINIMAL to stringResource(R.string.label_focus_mode_minimal),
+        FocusMode.DISPLAY_CLOCK to stringResource(R.string.label_focus_mode_clock),
+        FocusMode.STOPWATCH to stringResource(R.string.label_focus_mode_stopwatch),
+        FocusMode.TIMER to stringResource(R.string.label_focus_mode_timer)
     )
 
     Box {
@@ -1613,7 +1635,7 @@ private fun FocusModeSelector(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                modeLabels[selectedMode] ?: "Timer",
+                modeLabels[selectedMode] ?: stringResource(R.string.label_focus_mode_timer),
                 style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary)
             )
             Icon(
@@ -1731,14 +1753,14 @@ fun OverdueRescheduleSheet(
             ) {
                 androidx.compose.material3.TextButton(onClick = onDismiss) {
                     Text(
-                        "Cancel",
+                        stringResource(R.string.action_cancel),
                         style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
                     )
                 }
                 Text(
-                    text = "Reschedule",
+                    text = stringResource(R.string.action_reschedule),
                     style = FocusTheme.typography.body.copy(
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontWeight = FontWeight.Bold,
                         color = FocusTheme.colors.primary
                     ),
                     modifier = Modifier.weight(1f),
@@ -1754,10 +1776,10 @@ fun OverdueRescheduleSheet(
                     }
                 ) {
                     Text(
-                        "Done",
+                        stringResource(R.string.action_done),
                         style = FocusTheme.typography.body.copy(
                             color = FocusTheme.colors.primary,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold
                         )
                     )
                 }

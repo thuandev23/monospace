@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.feature.detail.TaskDetailScreen
 import com.monospace.app.feature.focus.DetoxStatsScreen
 import com.monospace.app.feature.focus.FocusScreen
@@ -77,7 +78,7 @@ fun MonospaceNavGraph(
             arguments = listOf(
                 navArgument("listId") {
                     type = NavType.StringType
-                    defaultValue = "default"
+                    defaultValue = ListIds.DEFAULT
                 },
                 navArgument("showSearch") {
                     type = NavType.BoolType
@@ -112,7 +113,7 @@ fun MonospaceNavGraph(
                 },
                 onTodayClick = {
                     // "today" listId → GetTasksUseCase trả tasks hôm nay từ tất cả lists
-                    navController.navigate(Screen.Home.withList("today")) {
+                    navController.navigate(Screen.Home.withList(ListIds.TODAY)) {
                         launchSingleTop = true
                     }
                 },
@@ -122,7 +123,7 @@ fun MonospaceNavGraph(
                     }
                 },
                 onAllClick = {
-                    navController.navigate(Screen.Home.withList("all")) {
+                    navController.navigate(Screen.Home.withList(ListIds.ALL)) {
                         launchSingleTop = true
                     }
                 }

@@ -35,10 +35,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 import java.util.Calendar
 
@@ -56,7 +58,7 @@ fun TabBarSettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Tab Bar",
+                        stringResource(R.string.label_tab_bar),
                         style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
                     )
                 },
@@ -80,7 +82,7 @@ fun TabBarSettingsScreen(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                "Choose which tabs appear in the bottom navigation bar. Today and Settings are always visible.",
+                stringResource(R.string.msg_tab_bar_desc),
                 style = FocusTheme.typography.caption.copy(
                     color = FocusTheme.colors.secondary,
                     fontSize = 13.sp
@@ -113,7 +115,7 @@ fun TabBarSettingsScreen(
                                 )
                             }
                         },
-                        label = "Today",
+                        label = stringResource(R.string.label_today),
                         checked = true,
                         enabled = false,
                         onCheckedChange = {}
@@ -134,7 +136,7 @@ fun TabBarSettingsScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                         },
-                        label = "Upcoming",
+                        label = stringResource(R.string.label_upcoming),
                         checked = settings.showUpcoming,
                         onCheckedChange = { viewModel.setShowUpcoming(it) }
                     )
@@ -154,7 +156,7 @@ fun TabBarSettingsScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                         },
-                        label = "Search",
+                        label = stringResource(R.string.label_search),
                         checked = settings.showSearch,
                         onCheckedChange = { viewModel.setShowSearch(it) }
                     )
@@ -174,7 +176,7 @@ fun TabBarSettingsScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                         },
-                        label = "Settings",
+                        label = stringResource(R.string.label_settings),
                         checked = true,
                         enabled = false,
                         onCheckedChange = {}

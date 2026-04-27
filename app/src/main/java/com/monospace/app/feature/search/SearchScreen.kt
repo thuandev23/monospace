@@ -52,9 +52,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.feature.launcher.components.TaskItem
 import com.monospace.app.ui.theme.FocusTheme
@@ -87,7 +89,7 @@ fun SearchScreen(
                 shape = CircleShape,
                 modifier = Modifier.size(64.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add task", modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.content_desc_add_task), modifier = Modifier.size(32.dp))
             }
         }
     ) { paddingValues ->
@@ -121,7 +123,7 @@ fun SearchScreen(
                             .onFocusChanged { isFocused = it.isFocused },
                         placeholder = {
                             Text(
-                                "Search",
+                                stringResource(R.string.label_search),
                                 style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
                             )
                         },
@@ -188,7 +190,7 @@ fun SearchScreen(
                                 modifier = Modifier.size(48.dp)
                             )
                             Text(
-                                "What do you want to search?",
+                                stringResource(R.string.label_search_hint),
                                 style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary)
                             )
                             Text(

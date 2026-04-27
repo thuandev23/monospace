@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,7 +79,7 @@ fun HomeBottomBar(
                 IconButton(onClick = onUpcomingClick) {
                     Icon(
                         Icons.Default.DateRange,
-                        contentDescription = "Upcoming",
+                        contentDescription = stringResource(R.string.label_upcoming),
                         tint = FocusTheme.colors.secondary,
                         modifier = Modifier.size(26.dp)
                     )
@@ -90,7 +91,7 @@ fun HomeBottomBar(
                 IconButton(onClick = onSearchClick) {
                     Icon(
                         Icons.Default.Search,
-                        contentDescription = "Search",
+                        contentDescription = stringResource(R.string.label_search),
                         tint = FocusTheme.colors.secondary,
                         modifier = Modifier.size(26.dp)
                     )
@@ -101,7 +102,7 @@ fun HomeBottomBar(
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     Icons.Default.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.label_settings),
                     tint = FocusTheme.colors.secondary,
                     modifier = Modifier.size(26.dp)
                 )

@@ -26,9 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 
 @Composable
@@ -50,7 +52,7 @@ fun AppLockScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Nhập mã PIN",
+            stringResource(R.string.label_enter_pin),
             style = FocusTheme.typography.title.copy(
                 color = FocusTheme.colors.primary,
                 fontWeight = FontWeight.SemiBold
@@ -79,7 +81,7 @@ fun AppLockScreen(
         if (shake) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "Sai mã PIN",
+                stringResource(R.string.error_wrong_pin),
                 style = FocusTheme.typography.caption.copy(
                     color = FocusTheme.colors.destructive,
                     fontSize = 13.sp
@@ -142,7 +144,7 @@ private fun NumKey(label: String, onClick: () -> Unit) {
         if (label == "⌫") {
             Icon(
                 Icons.AutoMirrored.Filled.Backspace,
-                contentDescription = "Xóa",
+                contentDescription = stringResource(R.string.label_remove_pin),
                 tint = FocusTheme.colors.primary,
                 modifier = Modifier.size(22.dp)
             )

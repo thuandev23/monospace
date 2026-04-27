@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskStatus
@@ -210,7 +211,7 @@ class RemindersIntegrationViewModel @Inject constructor(
             pageToken = body.nextPageToken
         } while (pageToken != null)
 
-        val tasks = allGTasks.mapNotNull { it.toTask(defaultListId = "default") }
+        val tasks = allGTasks.mapNotNull { it.toTask(defaultListId = ListIds.DEFAULT) }
         taskRepository.mergeRemoteTasks(tasks)
     }
 

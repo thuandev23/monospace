@@ -17,6 +17,7 @@ import com.monospace.app.core.domain.model.GeneralSettings
 import com.monospace.app.core.domain.model.GroupOption
 import com.monospace.app.core.domain.model.SecondStatus
 import com.monospace.app.core.domain.model.SortOption
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.TaskAlignment
 import com.monospace.app.core.domain.model.TaskDisplaySettings
 import com.monospace.app.core.domain.model.ViewSettings
@@ -41,7 +42,7 @@ class SettingsDataStore @Inject constructor(
         private val KEY_LAUNCHER_SHORTCUTS = stringPreferencesKey("launcher_shortcuts")
         private val KEY_SIDEBAR_ITEM_ORDER = stringPreferencesKey("sidebar_item_order")
         private val KEY_SIDEBAR_HIDDEN_ITEMS = stringPreferencesKey("sidebar_hidden_items")
-        val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         // TaskDisplaySettings keys
         private val KEY_TASK_SHOW_STATUS_CIRCLE = booleanPreferencesKey("task_show_status_circle")
@@ -71,12 +72,15 @@ class SettingsDataStore @Inject constructor(
         // Wallpaper
         private val KEY_WALLPAPER_CONFIG = stringPreferencesKey("wallpaper_config")
 
+        // Tab Bar Settings
+        private val KEY_TAB_SHOW_UPCOMING = booleanPreferencesKey("tab_show_upcoming")
+        private val KEY_TAB_SHOW_SEARCH = booleanPreferencesKey("tab_show_search")
     }
 
     // --- Default List ---
 
     val defaultListId: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[KEY_DEFAULT_LIST_ID] ?: "default"
+        prefs[KEY_DEFAULT_LIST_ID] ?: ListIds.DEFAULT
     }
 
     suspend fun setDefaultListId(listId: String) {
@@ -234,15 +238,15 @@ class SettingsDataStore @Inject constructor(
 
     // --- TabBarSettings ---
 
-    val tabBarShowUpcoming: Flow<Boolean> = context.dataStore.data.map { it[booleanPreferencesKey("tab_show_upcoming")] ?: true }
-    val tabBarShowSearch: Flow<Boolean> = context.dataStore.data.map { it[booleanPreferencesKey("tab_show_search")] ?: true }
+    val tabBarShowUpcoming: Flow<Boolean> = context.dataStore.data.map { it[KEY_TAB_SHOW_UPCOMING] ?: true }
+    val tabBarShowSearch: Flow<Boolean> = context.dataStore.data.map { it[KEY_TAB_SHOW_SEARCH] ?: true }
 
     suspend fun setTabBarShowUpcoming(show: Boolean) {
-        context.dataStore.edit { it[booleanPreferencesKey("tab_show_upcoming")] = show }
+        context.dataStore.edit { it[KEY_TAB_SHOW_UPCOMING] = show }
     }
 
     suspend fun setTabBarShowSearch(show: Boolean) {
-        context.dataStore.edit { it[booleanPreferencesKey("tab_show_search")] = show }
+        context.dataStore.edit { it[KEY_TAB_SHOW_SEARCH] = show }
     }
 
     // --- GeneralSettings ---

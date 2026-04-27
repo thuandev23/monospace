@@ -75,6 +75,7 @@
 
     <!-- Search -->
     <string name="hint_search_tasks">Tìm task…</string>
+    <string name="label_search_hint">What do you want to search?</string>
 
     <!-- Upcoming screen -->
     <string name="msg_no_upcoming_tasks">Không có task nào sắp tới</string>
@@ -108,6 +109,39 @@
     <string name="label_item_all">All</string>
     <string name="label_sync_reminders">Sync with Reminders</string>
     <string name="label_connect_notion">Connect to Notion</string>
+    <string name="label_tab_bar">Tab Bar</string>
+    <string name="msg_tab_bar_desc">Choose which tabs appear in the bottom navigation bar. Today and Settings are always visible.</string>
+    <string name="label_general">General</string>
+    <string name="label_focus">Focus</string>
+    <string name="label_wallpapers">Wallpapers</string>
+    <string name="label_about">About</string>
+    <string name="label_task_default">Task Default</string>
+    <string name="label_monospace_pro">Monospace Pro</string>
+    <string name="label_pro_active">Active</string>
+    <string name="label_pro_promo">Buy once, lifetime update</string>
+    <string name="action_upgrade">Upgrade</string>
+
+    <string name="label_theme">Theme</string>
+    <string name="label_theme_minimalist">Minimalist</string>
+    <string name="label_theme_reminders">Reminders</string>
+    <string name="label_language">Language</string>
+    <string name="label_language_system">System default</string>
+    <string name="label_add_task_to">Add task to</string>
+    <string name="label_position_bottom">Bottom</string>
+    <string name="label_position_top">Top</string>
+    <string name="label_second_status">Second status</string>
+    <string name="label_status_cancelled">Cancelled</string>
+    <string name="label_status_in_progress">In progress</string>
+    <string name="label_reverse_scroll">Reverse scroll direction</string>
+    <string name="msg_reverse_scroll_desc">When enabled, tasks are added to the reverse end of the list.</string>
+    <string name="label_passcode">Passcode</string>
+    <string name="label_passcode_enabled">Enabled</string>
+    <string name="label_passcode_not_set">Not set</string>
+    <string name="msg_language_android_version">Language changes will open system settings on this Android version.</string>
+    <string name="label_set_passcode">Set Passcode</string>
+    <string name="label_change_passcode">Change Passcode</string>
+    <string name="msg_passcode_desc">Enter a 4-digit PIN to protect Focus Mode.</string>
+    <string name="error_pin_digits">PIN must be 4 digits</string>
 
     <!-- Task List screen -->
     <string name="label_lists">Danh sách</string>
@@ -123,6 +157,8 @@
     <string name="content_desc_options">Tuỳ chọn</string>
     <string name="widget_task_list_description">Danh sách task hôm nay</string>
     <string name="widget_clock_description">Đồng hồ và ngày tháng</string>
+    <string name="label_smart_lists">Smart Lists</string>
+    <string name="msg_no_folders_hint">No folders yet. Tap + to create one.</string>
 
     <!-- Focus & Blocking -->
     <string name="notif_focus_active_title">Monospace Focus đang bật</string>
@@ -135,7 +171,49 @@
     <string name="permission_banner_overlay_title">Quyền hiển thị trên cùng</string>
     <string name="permission_banner_overlay_desc">Cần quyền này để tự động chặn ứng dụng sau 5 giây cảnh báo.</string>
     <string name="action_grant_now">Cấp quyền ngay</string>
+    <string name="action_stop_focus">Stop Focus</string>
+    <string name="action_start_focus">Start Focus</string>
+    <string name="msg_focus_complete">Session complete!</string>
+    <string name="label_focus_mode_minimal">Minimal</string>
+    <string name="label_focus_mode_clock">Display Clock</string>
+    <string name="label_focus_mode_stopwatch">Stopwatch</string>
+    <string name="label_focus_mode_timer">Timer</string>
 
     <!-- Live Wallpaper -->
     <string name="live_wallpaper_description">Minimal canvas with time, tasks &amp; shortcuts</string>
+
+    <!-- Passcode -->
+    <string name="label_remove_pin">Remove PIN</string>
+    <string name="label_enter_pin_hint">Nhập mã PIN 4 chữ số</string>
+    <string name="error_wrong_pin">Sai mã PIN</string>
+    <string name="label_enter_pin">Nhập mã PIN</string>
+
+    <!-- Task Actions -->
+    <string name="action_reschedule">Reschedule</string>
+    <string name="action_move">Move</string>
+    <string name="action_mark_done">Mark as Done</string>
+    <string name="action_confirm_delete">Confirm Delete</string>
+    <string name="msg_confirm_delete_desc">Are you sure? This action cannot be undone.</string>
+    <string name="label_move_to">Move to</string>
+
+    <string name="label_focusing_on">Đang Focus: %1$s</string>
+    <string name="label_in_focus">Đang trong Focus</string>
+    <string name="msg_app_blocked_desc">\"%1$s\" bị chặn để bạn tập trung hơn.</string>
+    <string name="label_want_a_break">Muốn nghỉ ngắn?</string>
+    <string name="label_unlock_breath">Thở</string>
+    <string name="label_unlock_grass">Ra ngoài</string>
+    <string name="label_unlock_pushup">Push-up</string>
+    <string name="label_duration_5m">5 phút</string>
+    <string name="label_duration_15m">15 phút</string>
+    <string name="label_duration_3m">3 phút</string>
+    <string name="action_unlock_passcode">Mở khóa bằng Passcode</string>
+    <string name="action_turn_off_focus">Tắt Focus Mode</string>
+    <string name="label_remaining_time">Còn lại %1$02d:%2$02d</string>
+
+    <string name="msg_task_created">Task đã được tạo</string>
+    <string name="error_add_task">Không thể thêm task: %1$s</string>
+    <string name="error_update_task">Không thể cập nhật task: %1$s</string>
+    <string name="error_delete_task">Không thể xóa task: %1$s</string>
+    <string name="error_move_task">Không thể di chuyển task: %1$s</string>
+    <string name="error_reschedule_task">Không thể reschedule task: %1$s</string>
 </resources>

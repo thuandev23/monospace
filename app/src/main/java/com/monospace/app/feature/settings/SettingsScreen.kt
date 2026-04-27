@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.R
+import com.monospace.app.core.domain.model.SidebarIds
 import com.monospace.app.ui.theme.FocusTheme
 import java.util.Calendar
 import kotlin.math.roundToInt
@@ -125,7 +126,7 @@ fun SettingsScreen(
         mutableStateOf(
             listOf(
                 EditableListItem(
-                    "all",
+                    SidebarIds.ALL,
                     "All",
                     {
                         Icon(
@@ -135,7 +136,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     }),
-                EditableListItem("today", "Today", {
+                EditableListItem(SidebarIds.TODAY, "Today", {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -153,7 +154,7 @@ fun SettingsScreen(
                     }
                 }),
                 EditableListItem(
-                    "upcoming",
+                    SidebarIds.UPCOMING,
                     "Upcoming",
                     {
                         Icon(
@@ -189,7 +190,7 @@ fun SettingsScreen(
     var reminderItems by remember {
         mutableStateOf(
             listOf(
-                EditableListItem("sync_reminders", "Sync with Reminders", { ReminderIcon() }, canReorder = false)
+                EditableListItem(SidebarIds.SYNC_REMINDERS, "Sync with Reminders", { ReminderIcon() }, canReorder = false)
             )
         )
     }
@@ -198,7 +199,7 @@ fun SettingsScreen(
     var notionItems by remember {
         mutableStateOf(
             listOf(
-                EditableListItem("notion", "Connect to Notion", { NotionIcon() }, canReorder = false)
+                EditableListItem(SidebarIds.NOTION, "Connect to Notion", { NotionIcon() }, canReorder = false)
             )
         )
     }
@@ -393,6 +394,12 @@ fun SettingsScreen(
                     else -1
 
                     itemsToRender.forEachIndexed { index, item ->
+                        val itemTitle = when(item.id) {
+                            SidebarIds.ALL -> stringResource(R.string.label_item_all)
+                            SidebarIds.TODAY -> stringResource(R.string.label_today)
+                            SidebarIds.UPCOMING -> stringResource(R.string.label_upcoming)
+                            else -> item.title
+                        }
                         if (isEditMode) {
                             val translationTarget = when {
                                 index == draggingMainIdx -> draggingMainOffset
@@ -406,7 +413,7 @@ fun SettingsScreen(
                                 label = "main_drag_$index"
                             )
                             EditListItemRow(
-                                item = item,
+                                item = item.copy(title = itemTitle),
                                 dragOffsetY = animatedTranslation,
                                 isDragging = draggingMainIdx == index,
                                 onToggleVisibility = {
@@ -427,7 +434,7 @@ fun SettingsScreen(
                                 }
                             )
                         } else {
-                            SettingItem(icon = item.icon, title = item.title)
+                            SettingItem(icon = item.icon, title = itemTitle)
                         }
                         if (index < itemsToRender.size - 1) {
                             HorizontalDivider(
@@ -525,9 +532,10 @@ fun SettingsScreen(
                 ) {
                     Column {
                         reminderItemsToRender.forEachIndexed { index, item ->
+                            val itemTitle = if (item.id == SidebarIds.SYNC_REMINDERS) stringResource(R.string.label_sync_reminders) else item.title
                             if (isEditMode) {
                                 EditListItemRow(
-                                    item = item,
+                                    item = item.copy(title = itemTitle),
                                     onToggleVisibility = {
                                         val updated = reminderItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
                                         reminderItems = updated
@@ -538,7 +546,7 @@ fun SettingsScreen(
                             } else {
                                 SettingItem(
                                     icon = item.icon,
-                                    title = item.title,
+                                    title = itemTitle,
                                     onClick = if (isPro) onNavigateToReminders else onNavigateToProUpgrade
                                 )
                             }
@@ -565,9 +573,10 @@ fun SettingsScreen(
                 ) {
                     Column {
                         notionItemsToRender.forEachIndexed { index, item ->
+                            val itemTitle = if (item.id == SidebarIds.NOTION) stringResource(R.string.label_connect_notion) else item.title
                             if (isEditMode) {
                                 EditListItemRow(
-                                    item = item,
+                                    item = item.copy(title = itemTitle),
                                     onToggleVisibility = {
                                         val updated = notionItems.map { if (it.id == item.id) it.copy(isVisible = !it.isVisible) else it }
                                         notionItems = updated
@@ -578,7 +587,7 @@ fun SettingsScreen(
                             } else {
                                 SettingItem(
                                     icon = item.icon,
-                                    title = item.title,
+                                    title = itemTitle,
                                     onClick = if (isPro) onNavigateToNotion else onNavigateToProUpgrade
                                 )
                             }
@@ -647,7 +656,7 @@ fun AppSettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Settings",
+                    text = stringResource(R.string.label_settings),
                     style = FocusTheme.typography.title.copy(fontWeight = FontWeight.SemiBold)
                 )
                 IconButton(
@@ -680,7 +689,7 @@ fun AppSettingsSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        "Monospace Pro",
+                        stringResource(R.string.label_monospace_pro),
                         style = FocusTheme.typography.body.copy(
                             color = FocusTheme.colors.background,
                             fontWeight = FontWeight.Bold,
@@ -688,7 +697,7 @@ fun AppSettingsSheet(
                         )
                     )
                     Text(
-                        if (isPro) "Active" else "Buy once, lifetime update",
+                        if (isPro) stringResource(R.string.label_pro_active) else stringResource(R.string.label_pro_promo),
                         style = FocusTheme.typography.caption.copy(
                             color = FocusTheme.colors.background.copy(alpha = 0.7f),
                             fontSize = 12.sp
@@ -706,7 +715,7 @@ fun AppSettingsSheet(
                     ) {
                         Icon(Icons.Default.Star, null, tint = FocusTheme.colors.background, modifier = Modifier.size(14.dp))
                         Text(
-                            "Upgrade",
+                            stringResource(R.string.action_upgrade),
                             style = FocusTheme.typography.label.copy(
                                 color = FocusTheme.colors.background,
                                 fontWeight = FontWeight.SemiBold,
@@ -728,31 +737,31 @@ fun AppSettingsSheet(
                 Column {
                     SettingItem(
                         icon = { Icon(Icons.AutoMirrored.Filled.List, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                        title = "Task Default",
+                        title = stringResource(R.string.label_task_default),
                         onClick = onNavigateToTaskDefault
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
                     SettingItem(
                         icon = { Icon(Icons.Default.Tab, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                        title = "Tab Bar",
+                        title = stringResource(R.string.label_tab_bar),
                         onClick = onNavigateToTabBar
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
                     SettingItem(
                         icon = { Icon(Icons.Default.Tune, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                        title = "General",
+                        title = stringResource(R.string.label_general),
                         onClick = onNavigateToGeneral
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
                     SettingItem(
                         icon = { Icon(Icons.Default.Timer, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                        title = "Focus",
+                        title = stringResource(R.string.label_focus),
                         onClick = onNavigateToFocus
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp), color = FocusTheme.colors.divider.copy(alpha = 0.3f))
                     SettingItem(
                         icon = { Icon(Icons.Default.Image, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                        title = "Wallpapers",
+                        title = stringResource(R.string.label_wallpapers),
                         onClick = onNavigateToWallpaper
                     )
                 }
@@ -768,7 +777,7 @@ fun AppSettingsSheet(
             ) {
                 SettingItem(
                     icon = { Icon(Icons.Default.Info, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(24.dp)) },
-                    title = "About",
+                    title = stringResource(R.string.label_about),
                     onClick = onNavigateToAbout
                 )
             }

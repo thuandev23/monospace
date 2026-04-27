@@ -42,11 +42,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import com.monospace.app.R
 import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.service.AppBlockingState
 import com.monospace.app.feature.focus.FocusTimerState
@@ -181,7 +183,7 @@ private fun BlockedMainContent(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                text = if (activeProfileName != null) "Đang Focus: $activeProfileName" else "Đang trong Focus",
+                text = if (activeProfileName != null) stringResource(R.string.label_focusing_on, activeProfileName) else stringResource(R.string.label_in_focus),
                 style = FocusTheme.typography.headline.copy(
                     color = FocusTheme.colors.primary,
                     fontSize = 24.sp
@@ -196,7 +198,7 @@ private fun BlockedMainContent(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "\"${appInfo?.first ?: blockedPackage}\" bị chặn để bạn tập trung hơn.",
+                text = stringResource(R.string.msg_app_blocked_desc, appInfo?.first ?: blockedPackage),
                 style = FocusTheme.typography.body.copy(
                     color = FocusTheme.colors.secondary,
                     textAlign = TextAlign.Center
@@ -206,7 +208,7 @@ private fun BlockedMainContent(
             Spacer(Modifier.height(40.dp))
 
             Text(
-                text = "Muốn nghỉ ngắn?",
+                text = stringResource(R.string.label_want_a_break),
                 style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.secondary)
             )
 
@@ -219,22 +221,22 @@ private fun BlockedMainContent(
                 UnlockButton(
                     modifier = Modifier.weight(1f),
                     emoji = "🌬️",
-                    label = "Thở",
-                    sublabel = "5 phút",
+                    label = stringResource(R.string.label_unlock_breath),
+                    sublabel = stringResource(R.string.label_duration_5m),
                     onClick = onBreathing
                 )
                 UnlockButton(
                     modifier = Modifier.weight(1f),
                     emoji = "🌿",
-                    label = "Ra ngoài",
-                    sublabel = "15 phút",
+                    label = stringResource(R.string.label_unlock_grass),
+                    sublabel = stringResource(R.string.label_duration_15m),
                     onClick = onTouchGrass
                 )
                 UnlockButton(
                     modifier = Modifier.weight(1f),
                     emoji = "💪",
-                    label = "Push-up",
-                    sublabel = "3 phút",
+                    label = stringResource(R.string.label_unlock_pushup),
+                    sublabel = stringResource(R.string.label_duration_3m),
                     onClick = onPushUp
                 )
             }
@@ -244,7 +246,7 @@ private fun BlockedMainContent(
             if (hasPin) {
                 TextButton(onClick = onPasscode) {
                     Text(
-                        text = "Mở khóa bằng Passcode",
+                        text = stringResource(R.string.action_unlock_passcode),
                         style = FocusTheme.typography.body.copy(
                             color = FocusTheme.colors.primary
                         )
@@ -255,7 +257,7 @@ private fun BlockedMainContent(
 
             TextButton(onClick = onDeactivate) {
                 Text(
-                    text = "Tắt Focus Mode",
+                    text = stringResource(R.string.action_turn_off_focus),
                     style = FocusTheme.typography.body.copy(
                         color = FocusTheme.colors.destructive
                     )
@@ -283,7 +285,7 @@ private fun PasscodeScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "Nhập Passcode",
+            stringResource(R.string.label_passcode),
             style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
         )
         
@@ -311,7 +313,7 @@ private fun PasscodeScreen(
         if (isError) {
             Spacer(Modifier.height(16.dp))
             Text(
-                "Sai Passcode, vui lòng thử lại",
+                stringResource(R.string.error_wrong_pin), // Using existing string
                 style = FocusTheme.typography.caption.copy(color = FocusTheme.colors.destructive)
             )
         }
@@ -372,7 +374,7 @@ private fun PasscodeScreen(
         Spacer(Modifier.height(32.dp))
         
         TextButton(onClick = onCancel) {
-            Text("Hủy", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
+            Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
         }
     }
 }
@@ -382,7 +384,7 @@ private fun CountdownDisplay(remainingSeconds: Long) {
     val minutes = remainingSeconds / 60
     val seconds = remainingSeconds % 60
     Text(
-        text = "Còn lại %02d:%02d".format(minutes, seconds),
+        text = stringResource(R.string.label_remaining_time, minutes, seconds),
         style = FocusTheme.typography.title.copy(
             color = FocusTheme.colors.primary,
             fontSize = 18.sp,

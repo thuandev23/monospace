@@ -1,6 +1,7 @@
 package com.monospace.app.core.domain.usecase
 
 
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
@@ -11,8 +12,8 @@ class GetTasksUseCase @Inject constructor(
 ) {
     operator fun invoke(listId: String): Flow<List<Task>> {
         return when (listId) {
-            "all" -> repository.observeAllTasksSortedByDate()
-            "today" -> repository.observeTodayTasks()
+            ListIds.ALL -> repository.observeAllTasksSortedByDate()
+            ListIds.TODAY -> repository.observeTodayTasks()
             else -> repository.observeTasks(listId)
         }
     }

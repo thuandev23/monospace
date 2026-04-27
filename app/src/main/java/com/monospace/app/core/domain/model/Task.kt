@@ -8,7 +8,7 @@ data class Task(
     val title: String,
     val notes: String? = null,
     val status: TaskStatus = TaskStatus.NOT_DONE,
-    val listId: String = "default",
+    val listId: String = ListIds.DEFAULT,
     val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
     val priority: Priority = Priority.NONE,
     val externalSource: String? = null,

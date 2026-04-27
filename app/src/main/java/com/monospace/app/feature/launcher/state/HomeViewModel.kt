@@ -6,6 +6,7 @@ import com.monospace.app.core.data.preferences.SettingsDataStore
 import com.monospace.app.core.domain.model.AddTaskPosition
 import com.monospace.app.core.domain.model.GeneralSettings
 import com.monospace.app.core.domain.model.GroupOption
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.Priority
 import com.monospace.app.core.domain.model.ReminderConfig
 import com.monospace.app.core.domain.model.RepeatConfig
@@ -24,6 +25,7 @@ import com.monospace.app.core.domain.usecase.ToggleTaskUseCase
 import com.monospace.app.core.domain.usecase.UpdateTaskUseCase
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
+import com.monospace.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,7 +61,7 @@ sealed interface HomeUiState {
         val showDatePicker: Boolean = false,
 
         // Task Creation State
-        val draftListId: String = "default",
+        val draftListId: String = ListIds.DEFAULT,
         val draftStartDateTime: Instant? = null,
         val draftEndDateTime: Instant? = null,
         val draftIsAllDay: Boolean = true,
@@ -93,7 +95,7 @@ class HomeViewModel @Inject constructor(
     val successEvent: SharedFlow<String> = _successEvent.asSharedFlow()
 
     private val _currentListId = MutableStateFlow(
-        savedStateHandle.get<String>("listId") ?: "default"
+        savedStateHandle.get<String>("listId") ?: ListIds.DEFAULT
     )
     private val _isSelectionMode = MutableStateFlow(false)
     private val _selectedTaskIds = MutableStateFlow<Set<String>>(emptySet())
@@ -107,8 +109,8 @@ class HomeViewModel @Inject constructor(
     // Draft State — mặc định theo list đang xem (virtual listId → về default)
     private val _draftListId = MutableStateFlow(
         savedStateHandle.get<String>("listId")
-            ?.takeIf { it != "all" && it != "today" }
-            ?: "default"
+            ?.takeIf { it != ListIds.ALL && it != ListIds.TODAY }
+            ?: ListIds.DEFAULT
     )
     private val _draftStartDateTime = MutableStateFlow<Instant?>(null)
     private val _draftEndDateTime = MutableStateFlow<Instant?>(null)
@@ -129,7 +131,7 @@ class HomeViewModel @Inject constructor(
     val wallpaperConfig = settingsDataStore.wallpaperConfig
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.monospace.app.core.domain.model.WallpaperConfig())
 
-    val wallpaperTasks: StateFlow<List<Task>> = getTasksUseCase("today")
+    val wallpaperTasks: StateFlow<List<Task>> = getTasksUseCase(ListIds.TODAY)
         .map { tasks -> tasks.filter { it.status != TaskStatus.DONE }.take(10) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -269,9 +271,9 @@ class HomeViewModel @Inject constructor(
                 addTaskUseCase(task)
                 resetDraft()
                 setShowCreateSheet(false)
-                _successEvent.emit("Task đã được tạo")
+                _successEvent.emit(context.getString(R.string.msg_task_created))
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể thêm task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_add_task, e.message ?: ""))
             }
         }
     }
@@ -279,7 +281,7 @@ class HomeViewModel @Inject constructor(
     private fun resetDraft() {
         // Reset về list hiện tại đang xem (virtual listId → về default)
         val currentList = _currentListId.value
-        _draftListId.value = if (currentList == "all" || currentList == "today") "default" else currentList
+        _draftListId.value = if (currentList == ListIds.ALL || currentList == ListIds.TODAY) ListIds.DEFAULT else currentList
         _draftStartDateTime.value = null
         _draftEndDateTime.value = null
         _draftIsAllDay.value = true
@@ -310,17 +312,17 @@ class HomeViewModel @Inject constructor(
             try {
                 toggleTaskUseCase(taskId, isCompleted)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_update_task, e.message ?: ""))
             }
         }
     }
 
-    fun setTaskStatus(taskId: String, status: com.monospace.app.core.domain.model.TaskStatus) {
+    fun setTaskStatus(taskId: String, status: TaskStatus) {
         viewModelScope.launch {
             try {
                 taskRepository.setTaskStatus(taskId, status)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_update_task, e.message ?: ""))
             }
         }
     }
@@ -331,7 +333,7 @@ class HomeViewModel @Inject constructor(
                 _selectedTaskIds.value.forEach { id -> deleteTaskUseCase(id) }
                 setSelectionMode(false)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể xóa task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_delete_task, e.message ?: ""))
             }
         }
     }
@@ -366,7 +368,7 @@ class HomeViewModel @Inject constructor(
             try {
                 deleteTaskUseCase(taskId)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể xóa task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_delete_task, e.message ?: ""))
             }
         }
     }
@@ -387,7 +389,7 @@ class HomeViewModel @Inject constructor(
                 _selectedTaskIds.value.forEach { id -> toggleTaskUseCase(id, true) }
                 setSelectionMode(false)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể cập nhật task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_update_task, e.message ?: ""))
             }
         }
     }
@@ -401,7 +403,7 @@ class HomeViewModel @Inject constructor(
                 }
                 setSelectionMode(false)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể di chuyển task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_move_task, e.message ?: ""))
             }
         }
     }
@@ -429,7 +431,7 @@ class HomeViewModel @Inject constructor(
                 }
                 setSelectionMode(false)
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể reschedule task: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_reschedule_task, e.message ?: ""))
             }
         }
     }
@@ -446,7 +448,7 @@ class HomeViewModel @Inject constructor(
                     updateTaskUseCase(task.copy(startDateTime = newInstant, isAllDay = true))
                 }
             } catch (e: Exception) {
-                _errorEvent.emit("Không thể reschedule: ${e.message}")
+                _errorEvent.emit(context.getString(R.string.error_reschedule_task, e.message ?: ""))
             }
         }
     }

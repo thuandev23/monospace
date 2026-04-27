@@ -57,10 +57,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.ui.theme.FocusTheme
 
@@ -116,7 +119,7 @@ fun TaskListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Lists",
+                        stringResource(R.string.label_lists),
                         style = FocusTheme.typography.displayLarge.copy(
                             color = FocusTheme.colors.primary,
                             fontWeight = FontWeight.Bold
@@ -132,7 +135,7 @@ fun TaskListScreen(
                             modifier = Modifier.background(FocusTheme.colors.surface)
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Edit lists", color = FocusTheme.colors.primary) },
+                                text = { Text(stringResource(R.string.label_edit_lists), color = FocusTheme.colors.primary) },
                                 leadingIcon = { Icon(Icons.Default.Edit, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(18.dp)) },
                                 onClick = {
                                     showMenu = false
@@ -141,17 +144,17 @@ fun TaskListScreen(
                             )
                             HorizontalDivider(color = FocusTheme.colors.divider.copy(alpha = 0.5f))
                             DropdownMenuItem(
-                                text = { Text("New folder", color = FocusTheme.colors.primary) },
+                                text = { Text(stringResource(R.string.label_new_folder), color = FocusTheme.colors.primary) },
                                 leadingIcon = { Icon(Icons.Default.CreateNewFolder, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(18.dp)) },
                                 onClick = { showMenu = false; viewModel.showCreateDialog() }
                             )
                             DropdownMenuItem(
-                                text = { Text("New list", color = FocusTheme.colors.primary) },
+                                text = { Text(stringResource(R.string.label_new_list), color = FocusTheme.colors.primary) },
                                 leadingIcon = { Icon(Icons.Default.List, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(18.dp)) },
                                 onClick = { showMenu = false; viewModel.showCreateDialog() }
                             )
                             DropdownMenuItem(
-                                text = { Text("New workspace", color = FocusTheme.colors.primary) },
+                                text = { Text(stringResource(R.string.label_new_workspace), color = FocusTheme.colors.primary) },
                                 leadingIcon = { Icon(Icons.Default.Add, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(18.dp)) },
                                 onClick = { showMenu = false }
                             )
@@ -163,7 +166,7 @@ fun TaskListScreen(
 
             // ── Smart Lists ──────────────────────────────────────────────────
             item {
-                SectionHeader("Smart Lists")
+                SectionHeader(stringResource(R.string.label_smart_lists))
                 Spacer(Modifier.height(8.dp))
             }
 
@@ -176,7 +179,7 @@ fun TaskListScreen(
                 ) {
                     SmartListRow(
                         icon = { Icon(Icons.Default.List, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(22.dp)) },
-                        label = "All",
+                        label = stringResource(R.string.label_item_all),
                         count = uiState.allTaskCount.takeIf { it > 0 },
                         onClick = onAllClick
                     )
@@ -187,7 +190,7 @@ fun TaskListScreen(
                     )
                     SmartListRow(
                         icon = { Icon(Icons.Default.Today, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(22.dp)) },
-                        label = "Today",
+                        label = stringResource(R.string.label_today),
                         count = uiState.todayTaskCount.takeIf { it > 0 },
                         onClick = onTodayClick
                     )
@@ -198,7 +201,7 @@ fun TaskListScreen(
                     )
                     SmartListRow(
                         icon = { Icon(Icons.Default.DateRange, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(22.dp)) },
-                        label = "Upcoming",
+                        label = stringResource(R.string.label_upcoming),
                         count = null,
                         onClick = onUpcomingClick
                     )
@@ -213,10 +216,10 @@ fun TaskListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SectionHeader("My Folders")
+                    SectionHeader(stringResource(R.string.label_my_folders))
                     if (uiState.isEditMode) {
                         TextButton(onClick = viewModel::exitEditMode) {
-                            Text("Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                            Text(stringResource(R.string.action_done), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
                         }
                     } else {
                         IconButton(onClick = viewModel::showCreateDialog, modifier = Modifier.size(36.dp)) {
@@ -227,7 +230,7 @@ fun TaskListScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            val userLists = uiState.lists.filter { it.id != "default" }
+            val userLists = uiState.lists.filter { it.id != ListIds.DEFAULT }
 
             if (userLists.isEmpty()) {
                 item {
@@ -240,7 +243,7 @@ fun TaskListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "No folders yet. Tap + to create one.",
+                            stringResource(R.string.msg_no_folders_hint),
                             style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
                         )
                     }
@@ -281,7 +284,7 @@ fun TaskListScreen(
 
             // ── Reminders Section ──────────────────────────────────────────
             item {
-                SectionHeader("Reminders")
+                SectionHeader(stringResource(R.string.label_section_reminders))
                 Spacer(Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
@@ -291,7 +294,7 @@ fun TaskListScreen(
                 ) {
                     IntegrationRow(
                         icon = { Icon(Icons.Default.Notifications, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(22.dp)) },
-                        label = "Sync with Reminders",
+                        label = stringResource(R.string.label_sync_reminders),
                         onClick = {}
                     )
                 }
@@ -300,7 +303,7 @@ fun TaskListScreen(
 
             // ── Notion Section ─────────────────────────────────────────────
             item {
-                SectionHeader("Notion")
+                SectionHeader(stringResource(R.string.label_section_notion))
                 Spacer(Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
@@ -316,7 +319,7 @@ fun TaskListScreen(
                                 fontSize = 16.sp
                             ))
                         },
-                        label = "Connect to Notion",
+                        label = stringResource(R.string.label_connect_notion),
                         onClick = {}
                     )
                 }
@@ -469,12 +472,12 @@ private fun FolderRow(
                     modifier = Modifier.background(FocusTheme.colors.surface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Rename", color = FocusTheme.colors.primary) },
+                        text = { Text(stringResource(R.string.action_rename), color = FocusTheme.colors.primary) },
                         leadingIcon = { Icon(Icons.Default.Edit, null, tint = FocusTheme.colors.primary, modifier = Modifier.size(16.dp)) },
                         onClick = { showMenu = false; onEdit() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = FocusTheme.colors.destructive) },
+                        text = { Text(stringResource(R.string.action_delete_item), color = FocusTheme.colors.destructive) },
                         leadingIcon = { Icon(Icons.Default.Delete, null, tint = FocusTheme.colors.destructive, modifier = Modifier.size(16.dp)) },
                         onClick = { showMenu = false; onDelete() }
                     )
@@ -533,12 +536,12 @@ private fun CreateListDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = FocusTheme.colors.surface,
-        title = { Text("New list", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
+        title = { Text(stringResource(R.string.label_new_list), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                placeholder = { Text("List name", color = FocusTheme.colors.secondary) },
+                placeholder = { Text(stringResource(R.string.hint_list_name), color = FocusTheme.colors.secondary) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -553,12 +556,12 @@ private fun CreateListDialog(
             TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
                 Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Create", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_create), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
             }
         }
     )
@@ -577,7 +580,7 @@ private fun RenameListDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = FocusTheme.colors.surface,
-        title = { Text("Rename", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
+        title = { Text(stringResource(R.string.action_rename), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
         text = {
             OutlinedTextField(
                 value = name,
@@ -594,12 +597,12 @@ private fun RenameListDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
-                Text("Save", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_save), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary))
             }
         }
     )

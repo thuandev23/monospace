@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.BuildConfig
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskStatus
@@ -174,7 +175,7 @@ class NotionIntegrationViewModel @Inject constructor(
                     cursor = if (result.hasMore) result.nextCursor else null
                 } while (cursor != null)
 
-                val tasks = allPages.mapNotNull { it.toTask(defaultListId = "default") }
+                val tasks = allPages.mapNotNull { it.toTask(defaultListId = ListIds.DEFAULT) }
                 taskRepository.mergeRemoteTasks(tasks)
                 settingsDataStore.setNotionLastSynced(
                     Instant.now().atZone(ZoneId.systemDefault())

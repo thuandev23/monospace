@@ -60,23 +60,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monospace.app.R
 import com.monospace.app.core.domain.model.AddTaskPosition
 import com.monospace.app.core.domain.model.AppTheme
 import com.monospace.app.core.domain.model.SecondStatus
 import com.monospace.app.ui.theme.FocusTheme
+import java.util.Calendar
 import java.util.Locale
 
-private data class LanguageOption(val tag: String, val display: String)
+private data class LanguageOption(val tag: String, val displayRes: Int)
 
 private val SUPPORTED_LANGUAGES = listOf(
-    LanguageOption("", "System default"),
-    LanguageOption("en", "English"),
-    LanguageOption("vi", "Tiếng Việt")
+    LanguageOption("", R.string.label_language_system),
+    LanguageOption("en", -1), // "English" stays hardcoded for language picker or we can add it to strings.xml
+    LanguageOption("vi", -1)  // "Tiếng Việt" stays hardcoded
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,13 +101,22 @@ fun GeneralSettingsScreen(
     val currentLanguageDisplay = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
-            if (locales.isEmpty) "System default"
-            else SUPPORTED_LANGUAGES.find { it.tag == locales.get(0).toLanguageTag().substringBefore("-") }?.display
-                ?: locales.get(0).displayLanguage.replaceFirstChar { it.uppercase() }
+            if (locales.isEmpty) context.getString(R.string.label_language_system)
+            else {
+                val tag = locales.get(0).toLanguageTag().substringBefore("-")
+                when(tag) {
+                    "en" -> "English"
+                    "vi" -> "Tiếng Việt"
+                    else -> locales.get(0).displayLanguage.replaceFirstChar { it.uppercase() }
+                }
+            }
         } else {
             val lang = Locale.getDefault().language
-            SUPPORTED_LANGUAGES.find { it.tag == lang }?.display
-                ?: Locale.getDefault().displayLanguage.replaceFirstChar { it.uppercase() }
+            when(lang) {
+                "en" -> "English"
+                "vi" -> "Tiếng Việt"
+                else -> Locale.getDefault().displayLanguage.replaceFirstChar { it.uppercase() }
+            }
         }
     }
 
@@ -114,7 +126,7 @@ fun GeneralSettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "General",
+                        stringResource(R.string.label_general),
                         style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
                     )
                 },
@@ -143,10 +155,12 @@ fun GeneralSettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Palette,
-                    label = "Theme",
+                    label = stringResource(R.string.label_theme),
                     trailing = {
                         TrailingChevron(
-                            value = if (settings.theme == AppTheme.MINIMALIST) "Minimalist" else "Reminders"
+                            value = if (settings.theme == AppTheme.MINIMALIST) 
+                                stringResource(R.string.label_theme_minimalist) 
+                            else stringResource(R.string.label_theme_reminders)
                         )
                     },
                     onClick = { showThemePicker = true }
@@ -154,7 +168,7 @@ fun GeneralSettingsScreen(
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Default.Language,
-                    label = "Language",
+                    label = stringResource(R.string.label_language),
                     trailing = {
                         TrailingNav(value = currentLanguageDisplay)
                     },
@@ -166,10 +180,12 @@ fun GeneralSettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.PlaylistAdd,
-                    label = "Add task to",
+                    label = stringResource(R.string.label_add_task_to),
                     trailing = {
                         TrailingChevron(
-                            value = if (settings.addTaskPosition == AddTaskPosition.BOTTOM) "Bottom" else "Top"
+                            value = if (settings.addTaskPosition == AddTaskPosition.BOTTOM) 
+                                stringResource(R.string.label_position_bottom) 
+                            else stringResource(R.string.label_position_top)
                         )
                     },
                     onClick = { showAddTaskPicker = true }
@@ -180,10 +196,12 @@ fun GeneralSettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Tune,
-                    label = "Second status",
+                    label = stringResource(R.string.label_second_status),
                     trailing = {
                         TrailingChevron(
-                            value = if (settings.secondStatus == SecondStatus.CANCELLED) "Cancelled" else "In progress"
+                            value = if (settings.secondStatus == SecondStatus.CANCELLED) 
+                                stringResource(R.string.label_status_cancelled) 
+                            else stringResource(R.string.label_status_in_progress)
                         )
                     },
                     onClick = { showSecondStatusPicker = true }
@@ -194,7 +212,7 @@ fun GeneralSettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.SwapVert,
-                    label = "Reverse scroll direction",
+                    label = stringResource(R.string.label_reverse_scroll),
                     trailing = {
                         Switch(
                             checked = settings.reverseScrollDirection,
@@ -210,7 +228,7 @@ fun GeneralSettingsScreen(
                 )
             }
             Text(
-                "When enabled, tasks are added to the reverse end of the list.",
+                stringResource(R.string.msg_reverse_scroll_desc),
                 style = FocusTheme.typography.caption.copy(
                     color = FocusTheme.colors.secondary,
                     fontSize = 12.sp
@@ -222,9 +240,11 @@ fun GeneralSettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Lock,
-                    label = "Passcode",
+                    label = stringResource(R.string.label_passcode),
                     trailing = {
-                        TrailingNav(value = if (lockPin != null) "Enabled" else "Not set")
+                        TrailingNav(value = if (lockPin != null) 
+                            stringResource(R.string.label_passcode_enabled) 
+                        else stringResource(R.string.label_passcode_not_set))
                     },
                     onClick = { showPasscodeDialog = true }
                 )
@@ -237,8 +257,11 @@ fun GeneralSettingsScreen(
     // ── Pickers ────────────────────────────────────────────────────────────────
     if (showThemePicker) {
         RadioPickerSheet(
-            title = "Theme",
-            options = listOf("Minimalist", "Reminders"),
+            title = stringResource(R.string.label_theme),
+            options = listOf(
+                stringResource(R.string.label_theme_minimalist),
+                stringResource(R.string.label_theme_reminders)
+            ),
             selectedIndex = if (settings.theme == AppTheme.MINIMALIST) 0 else 1,
             onSelect = { idx ->
                 viewModel.update(settings.copy(theme = if (idx == 0) AppTheme.MINIMALIST else AppTheme.REMINDERS))
@@ -250,8 +273,11 @@ fun GeneralSettingsScreen(
 
     if (showAddTaskPicker) {
         RadioPickerSheet(
-            title = "Add task to",
-            options = listOf("Bottom", "Top"),
+            title = stringResource(R.string.label_add_task_to),
+            options = listOf(
+                stringResource(R.string.label_position_bottom),
+                stringResource(R.string.label_position_top)
+            ),
             selectedIndex = if (settings.addTaskPosition == AddTaskPosition.BOTTOM) 0 else 1,
             onSelect = { idx ->
                 viewModel.update(settings.copy(addTaskPosition = if (idx == 0) AddTaskPosition.BOTTOM else AddTaskPosition.TOP))
@@ -263,8 +289,11 @@ fun GeneralSettingsScreen(
 
     if (showSecondStatusPicker) {
         RadioPickerSheet(
-            title = "Second status",
-            options = listOf("Cancelled", "In progress"),
+            title = stringResource(R.string.label_second_status),
+            options = listOf(
+                stringResource(R.string.label_status_cancelled),
+                stringResource(R.string.label_status_in_progress)
+            ),
             selectedIndex = if (settings.secondStatus == SecondStatus.CANCELLED) 0 else 1,
             onSelect = { idx ->
                 viewModel.update(settings.copy(secondStatus = if (idx == 0) SecondStatus.CANCELLED else SecondStatus.IN_PROGRESS))
@@ -490,7 +519,7 @@ private fun LanguagePickerSheet(
         containerColor = FocusTheme.colors.surface
     ) {
         Text(
-            text = "Language",
+            text = stringResource(R.string.label_language),
             style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary),
             modifier = Modifier
                 .fillMaxWidth()
@@ -507,7 +536,11 @@ private fun LanguagePickerSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = lang.display,
+                    text = if (lang.displayRes != -1) stringResource(lang.displayRes) else when(lang.tag) {
+                        "en" -> "English"
+                        "vi" -> "Tiếng Việt"
+                        else -> ""
+                    },
                     style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary)
                 )
                 if (lang.tag == currentTag) {
@@ -530,7 +563,7 @@ private fun LanguagePickerSheet(
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             HorizontalDivider(color = FocusTheme.colors.divider, thickness = 0.5.dp)
             Text(
-                text = "Language changes will open system settings on this Android version.",
+                text = stringResource(R.string.msg_language_android_version),
                 style = FocusTheme.typography.caption.copy(
                     color = FocusTheme.colors.secondary,
                     fontSize = 12.sp
@@ -559,14 +592,14 @@ private fun PasscodeDialog(
         containerColor = FocusTheme.colors.surface,
         title = {
             Text(
-                if (currentPin != null) "Change Passcode" else "Set Passcode",
+                if (currentPin != null) stringResource(R.string.label_change_passcode) else stringResource(R.string.label_set_passcode),
                 style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Enter a 4-digit PIN to protect Focus Mode.",
+                    stringResource(R.string.msg_passcode_desc),
                     style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary)
                 )
                 OutlinedTextField(
@@ -581,7 +614,7 @@ private fun PasscodeDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     isError = error,
-                    supportingText = if (error) {{ Text("PIN must be 4 digits") }} else null,
+                    supportingText = if (error) {{ Text(stringResource(R.string.error_pin_digits)) }} else null,
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = FocusTheme.colors.primary,
@@ -594,18 +627,18 @@ private fun PasscodeDialog(
         },
         confirmButton = {
             TextButton(onClick = { if (pin.length == 4) onSave(pin) else error = true }) {
-                Text("Save", color = FocusTheme.colors.primary)
+                Text(stringResource(R.string.action_save), color = FocusTheme.colors.primary)
             }
         },
         dismissButton = {
             Row {
                 if (currentPin != null) {
                     TextButton(onClick = onClear) {
-                        Text("Remove PIN", color = FocusTheme.colors.destructive)
+                        Text(stringResource(R.string.label_remove_pin), color = FocusTheme.colors.destructive)
                     }
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel", color = FocusTheme.colors.secondary)
+                    Text(stringResource(R.string.action_cancel), color = FocusTheme.colors.secondary)
                 }
             }
         }

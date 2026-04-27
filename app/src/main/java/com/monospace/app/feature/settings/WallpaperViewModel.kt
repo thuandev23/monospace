@@ -9,6 +9,7 @@ import android.view.WindowManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.monospace.app.core.data.preferences.SettingsDataStore
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.Task
 import com.monospace.app.core.domain.model.TaskStatus
 import com.monospace.app.core.domain.model.WallpaperConfig
@@ -42,7 +43,7 @@ class WallpaperViewModel @Inject constructor(
     val config: StateFlow<WallpaperConfig> = settingsDataStore.wallpaperConfig
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WallpaperConfig())
 
-    val todayTasks: StateFlow<List<Task>> = getTasksUseCase("today")
+    val todayTasks: StateFlow<List<Task>> = getTasksUseCase(ListIds.TODAY)
         .map { tasks -> tasks.filter { it.status != TaskStatus.DONE } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

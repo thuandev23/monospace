@@ -2,6 +2,7 @@ package com.monospace.app.feature.tasks
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monospace.app.core.domain.model.ListIds
 import com.monospace.app.core.domain.model.SyncStatus
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.core.domain.repository.TaskListRepository
@@ -130,7 +131,7 @@ class TaskListViewModel @Inject constructor(
     fun moveListUp(list: TaskList) {
         viewModelScope.launch {
             try {
-                val lists = uiState.value.lists.filter { it.id != "default" }
+                val lists = uiState.value.lists.filter { it.id != ListIds.DEFAULT }
                 val idx = lists.indexOfFirst { it.id == list.id }
                 if (idx <= 0) return@launch
                 val prev = lists[idx - 1]
@@ -145,7 +146,7 @@ class TaskListViewModel @Inject constructor(
     fun moveListDown(list: TaskList) {
         viewModelScope.launch {
             try {
-                val lists = uiState.value.lists.filter { it.id != "default" }
+                val lists = uiState.value.lists.filter { it.id != ListIds.DEFAULT }
                 val idx = lists.indexOfFirst { it.id == list.id }
                 if (idx < 0 || idx >= lists.size - 1) return@launch
                 val next = lists[idx + 1]
