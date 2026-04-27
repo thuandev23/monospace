@@ -570,7 +570,7 @@ fun MinimalCalendarDialog(
                             }
                     }
                     showDatePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
             }) { DatePicker(state = state) }
     }
     if (showTimePicker) {
@@ -599,7 +599,7 @@ fun MinimalCalendarDialog(
                     )
                     if (pickingTarget == "START") startTime = s else endTime = s
                     showTimePicker = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.action_ok)) }
                 }
                 }
             }
@@ -814,7 +814,7 @@ fun CustomReminderBottomSheet(onDismiss: () -> Unit, onDone: (ReminderConfig) ->
                             showTP = false
                         }) { Text(stringResource(R.string.action_cancel)) }; TextButton(onClick = {
                         time = LocalTime.of(state.hour, state.minute); showTP = false
-                    }) { Text("OK") }
+                    }) { Text(stringResource(R.string.action_ok)) }
                     }
                     }
                 }

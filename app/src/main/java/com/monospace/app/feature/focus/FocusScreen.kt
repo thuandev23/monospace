@@ -82,6 +82,8 @@ import com.monospace.app.core.domain.model.FocusProfile
 import com.monospace.app.core.domain.model.FocusSchedule
 import com.monospace.app.core.domain.model.TaskList
 import com.monospace.app.feature.launcher.components.Picker
+import androidx.compose.ui.res.stringResource
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -453,21 +455,21 @@ private fun ProfileCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Xóa profile?", color = FocusTheme.colors.primary) },
+            title = { Text(stringResource(R.string.msg_confirm_delete_profile), color = FocusTheme.colors.primary) },
             text = {
                 Text(
-                    "Profile \"${profile.name}\" sẽ bị xóa vĩnh viễn.",
+                    stringResource(R.string.msg_confirm_delete_profile_desc, profile.name),
                     color = FocusTheme.colors.secondary
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
-                    Text("Xóa", color = FocusTheme.colors.destructive)
+                    Text(stringResource(R.string.action_delete), color = FocusTheme.colors.destructive)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Hủy", color = FocusTheme.colors.secondary)
+                    Text(stringResource(R.string.action_cancel), color = FocusTheme.colors.secondary)
                 }
             },
             containerColor = FocusTheme.colors.surface
@@ -568,7 +570,7 @@ private fun ProfileCard(
         // Activate / Deactivate button
         if (profile.isActive) {
             TextButton(onClick = onDeactivate) {
-                Text("Tắt", color = FocusTheme.colors.secondary)
+                Text(stringResource(R.string.action_turn_off), color = FocusTheme.colors.secondary)
             }
         } else {
             Button(
@@ -580,7 +582,7 @@ private fun ProfileCard(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 Text(
-                    "Bật",
+                    stringResource(R.string.action_turn_on),
                     style = FocusTheme.typography.label.copy(color = FocusTheme.colors.background)
                 )
             }
@@ -604,7 +606,7 @@ private fun ProfileCard(
                 modifier = Modifier.background(FocusTheme.colors.surface)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Chỉnh sửa", color = FocusTheme.colors.primary) },
+                    text = { Text(stringResource(R.string.action_edit), color = FocusTheme.colors.primary) },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Edit,
@@ -617,7 +619,7 @@ private fun ProfileCard(
                 )
                 HorizontalDivider(color = FocusTheme.colors.divider)
                 DropdownMenuItem(
-                    text = { Text("Xóa", color = FocusTheme.colors.destructive) },
+                    text = { Text(stringResource(R.string.action_delete), color = FocusTheme.colors.destructive) },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Delete,

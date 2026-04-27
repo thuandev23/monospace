@@ -231,11 +231,11 @@ fun ViewOptionsBottomSheet(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary))
+                Text(stringResource(R.string.action_cancel), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.secondary))
             }
-            Text("View", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+            Text(stringResource(R.string.label_view), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
             TextButton(onClick = { onSettingsChange(draft); onDismiss() }) {
-                Text("Done", style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
+                Text(stringResource(R.string.action_done), style = FocusTheme.typography.headline.copy(color = FocusTheme.colors.primary))
             }
         }
 

@@ -61,6 +61,8 @@ import com.monospace.app.core.domain.model.ReminderUnit
 import com.monospace.app.core.domain.model.RepeatConfig
 import com.monospace.app.core.domain.model.RepeatUnit
 import com.monospace.app.feature.launcher.components.MinimalCalendarDialog
+import androidx.compose.ui.res.stringResource
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 import java.time.Instant
 import java.time.LocalTime
@@ -95,7 +97,7 @@ fun TaskDetailScreen(
 
         is TaskDetailUiState.NotFound -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Task không tồn tại", color = FocusTheme.colors.secondary)
+                Text(stringResource(R.string.msg_task_not_found), color = FocusTheme.colors.secondary)
             }
         }
 
@@ -137,16 +139,16 @@ private fun TaskDetailContent(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Xóa task?", color = FocusTheme.colors.primary) },
-            text = { Text("Hành động này không thể hoàn tác.", color = FocusTheme.colors.secondary) },
+            title = { Text(stringResource(R.string.msg_confirm_delete_task), color = FocusTheme.colors.primary) },
+            text = { Text(stringResource(R.string.msg_cannot_undo), color = FocusTheme.colors.secondary) },
             confirmButton = {
                 TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
-                    Text("Xóa", color = FocusTheme.colors.destructive)
+                    Text(stringResource(R.string.action_delete), color = FocusTheme.colors.destructive)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Hủy", color = FocusTheme.colors.secondary)
+                    Text(stringResource(R.string.action_cancel), color = FocusTheme.colors.secondary)
                 }
             },
             containerColor = FocusTheme.colors.surface
@@ -362,7 +364,7 @@ private fun ListPickerRow(
         ) {
             Icon(Icons.Default.Folder, contentDescription = null, tint = FocusTheme.colors.secondary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(12.dp))
-            Text("Danh sách", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.label_lists), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary), modifier = Modifier.weight(1f))
             Text(currentName, style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
         }
         DropdownMenu(
@@ -387,7 +389,12 @@ private fun PriorityRow(
     onSelect: (Priority) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val labels = mapOf(Priority.NONE to "Không", Priority.LOW to "Thấp", Priority.MEDIUM to "Trung bình", Priority.HIGH to "Cao")
+    val labels = mapOf(
+        Priority.NONE to stringResource(R.string.priority_none),
+        Priority.LOW to stringResource(R.string.priority_low),
+        Priority.MEDIUM to stringResource(R.string.priority_medium),
+        Priority.HIGH to stringResource(R.string.priority_high)
+    )
 
     Box {
         Row(
@@ -404,7 +411,7 @@ private fun PriorityRow(
                     .background(priorityColor(current))
             )
             Spacer(Modifier.width(12.dp))
-            Text("Ưu tiên", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.label_priority), style = FocusTheme.typography.body.copy(color = FocusTheme.colors.secondary), modifier = Modifier.weight(1f))
             Text(labels[current] ?: "Không", style = FocusTheme.typography.body.copy(color = FocusTheme.colors.primary))
         }
         DropdownMenu(

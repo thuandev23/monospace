@@ -216,4 +216,30 @@
     <string name="error_delete_task">Không thể xóa task: %1$s</string>
     <string name="error_move_task">Không thể di chuyển task: %1$s</string>
     <string name="error_reschedule_task">Không thể reschedule task: %1$s</string>
+
+    <!-- Common actions -->
+    <string name="action_ok">OK</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_turn_off">Turn Off</string>
+    <string name="action_turn_on">Turn On</string>
+
+    <!-- Labels -->
+    <string name="label_view">View</string>
+    <string name="label_priority">Priority</string>
+    <string name="label_wallpaper">Wallpaper</string>
+
+    <!-- Priority values -->
+    <string name="priority_none">None</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+
+    <!-- Dialogs -->
+    <string name="msg_task_not_found">Task not found</string>
+    <string name="msg_confirm_delete_task">Delete task?</string>
+    <string name="msg_confirm_delete_profile">Delete profile?</string>
+    <string name="msg_confirm_delete_profile_desc">Profile \"%1$s\" will be permanently deleted.</string>
+    <string name="msg_cannot_undo">This action cannot be undone.</string>
+    <string name="msg_break_time">Great job! Take a short break.</string>
+    <string name="notif_focus_session_done">Session complete! +1 streak 🔥</string>
 </resources>

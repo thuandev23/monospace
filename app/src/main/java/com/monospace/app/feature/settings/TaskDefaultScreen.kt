@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.core.domain.model.TaskAlignment
 import com.monospace.app.core.domain.model.TaskDisplaySettings
+import androidx.compose.ui.res.stringResource
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +62,7 @@ fun TaskDefaultScreen(
         containerColor = FocusTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Task Default", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
+                title = { Text(stringResource(R.string.label_task_default), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = FocusTheme.colors.primary)

@@ -56,6 +56,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monospace.app.core.domain.model.WallpaperAlignment
 import com.monospace.app.core.domain.model.WallpaperConfig
 import com.monospace.app.feature.wallpaper.LiveWallpaperService
+import androidx.compose.ui.res.stringResource
+import com.monospace.app.R
 import com.monospace.app.ui.theme.FocusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -99,7 +101,7 @@ fun WallpaperScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Wallpaper", style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
+                    Text(stringResource(R.string.label_wallpaper), style = FocusTheme.typography.title.copy(color = FocusTheme.colors.primary))
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

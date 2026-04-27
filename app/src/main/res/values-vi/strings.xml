@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common actions -->
+    <string name="action_cancel">Hủy</string>
+    <string name="action_delete">Xóa</string>
+    <string name="action_done">Xong</string>
+    <string name="action_add">Thêm</string>
+    <string name="action_ok">OK</string>
+    <string name="action_edit">Chỉnh sửa</string>
+    <string name="action_turn_off">Tắt</string>
+    <string name="action_turn_on">Bật</string>
+    <string name="action_reschedule">Lên lịch lại</string>
+    <string name="action_move">Di chuyển</string>
+    <string name="action_mark_done">Đánh dấu hoàn thành</string>
+    <string name="action_confirm_delete">Xác nhận xóa</string>
+    <string name="action_upgrade">Nâng cấp</string>
+    <string name="action_grant_now">Cấp quyền ngay</string>
+    <string name="action_stop_focus">Dừng Focus</string>
+    <string name="action_start_focus">Bắt đầu Focus</string>
+    <string name="action_select_all">Chọn tất cả</string>
+    <string name="action_create_task">Tạo task mới</string>
+
+    <!-- Labels -->
+    <string name="label_today">Hôm nay</string>
+    <string name="label_upcoming">Sắp tới</string>
+    <string name="label_search">Tìm kiếm</string>
+    <string name="label_settings">Cài đặt</string>
+    <string name="label_inbox">Hộp thư đến</string>
+    <string name="label_choose_folder">Chọn thư mục</string>
+    <string name="label_deadline">Hạn chót</string>
+    <string name="label_view">View</string>
+    <string name="label_priority">Ưu tiên</string>
+    <string name="label_wallpaper">Hình nền</string>
+    <string name="label_date">Ngày</string>
+    <string name="label_tomorrow">Ngày mai</string>
+    <string name="label_next_week">Tuần tới</string>
+    <string name="label_no_date">Không có ngày</string>
+    <string name="label_start">Bắt đầu</string>
+    <string name="label_end">Kết thúc</string>
+    <string name="label_time">Giờ</string>
+    <string name="label_duration">Thời lượng</string>
+    <string name="label_reminder">Nhắc nhở</string>
+    <string name="label_repeat">Lặp lại</string>
+    <string name="label_none">Không</string>
+    <string name="label_general">Cài đặt chung</string>
+    <string name="label_focus">Focus</string>
+    <string name="label_wallpapers">Hình nền</string>
+    <string name="label_about">Giới thiệu</string>
+    <string name="label_task_default">Task mặc định</string>
+    <string name="label_monospace_pro">Monospace Pro</string>
+    <string name="label_tab_bar">Thanh điều hướng</string>
+    <string name="label_theme">Giao diện</string>
+    <string name="label_language">Ngôn ngữ</string>
+    <string name="label_add_task_to">Thêm task vào</string>
+    <string name="label_second_status">Trạng thái phụ</string>
+    <string name="label_reverse_scroll">Đảo hướng cuộn</string>
+    <string name="label_passcode">Mã PIN</string>
+    <string name="label_passcode_enabled">Đã bật</string>
+    <string name="label_passcode_not_set">Chưa đặt</string>
+    <string name="label_set_passcode">Đặt mã PIN</string>
+    <string name="label_change_passcode">Đổi mã PIN</string>
+    <string name="label_move_to">Di chuyển tới</string>
+    <string name="label_new_folder">Thư mục mới</string>
+    <string name="label_edit_lists">Chỉnh sửa danh sách</string>
+    <string name="label_new_list">Danh sách mới</string>
+    <string name="label_my_folders">Thư mục của tôi</string>
+    <string name="label_smart_lists">Danh sách thông minh</string>
+
+    <!-- Priority values -->
+    <string name="priority_none">Không</string>
+    <string name="priority_low">Thấp</string>
+    <string name="priority_medium">Trung bình</string>
+    <string name="priority_high">Cao</string>
+
+    <!-- Messages -->
+    <string name="msg_no_tasks">Không tìm thấy task nào</string>
+    <string name="hint_task_title">Tiêu đề task</string>
+    <string name="msg_task_not_found">Task không tồn tại</string>
+    <string name="msg_confirm_delete_task">Xóa task?</string>
+    <string name="msg_confirm_delete_profile">Xóa profile?</string>
+    <string name="msg_confirm_delete_profile_desc">Profile \"%1$s\" sẽ bị xóa vĩnh viễn.</string>
+    <string name="msg_cannot_undo">Hành động này không thể hoàn tác.</string>
+    <string name="msg_break_time">Tốt lắm! Hãy nghỉ ngơi một chút.</string>
+    <string name="notif_focus_session_done">Hoàn thành phiên! +1 streak 🔥</string>
+    <string name="msg_confirm_delete_desc">Bạn có chắc? Hành động này không thể hoàn tác.</string>
+    <string name="msg_focus_complete">Hoàn thành phiên!</string>
+    <string name="msg_tab_bar_desc">Chọn tab hiển thị trong thanh điều hướng. Today và Settings luôn hiển thị.</string>
+    <string name="msg_reverse_scroll_desc">Khi bật, task mới được thêm vào đầu ngược lại của danh sách.</string>
+    <string name="msg_passcode_desc">Nhập mã PIN 4 chữ số để bảo vệ Focus Mode.</string>
+
+    <!-- Settings -->
+    <string name="label_section_reminders">Reminders</string>
+    <string name="label_section_notion">Notion</string>
+    <string name="label_sync_reminders">Đồng bộ với Reminders</string>
+    <string name="label_connect_notion">Kết nối với Notion</string>
+    <string name="label_theme_minimalist">Tối giản</string>
+    <string name="label_position_bottom">Cuối</string>
+    <string name="label_position_top">Đầu</string>
+    <string name="label_status_cancelled">Đã hủy</string>
+    <string name="label_status_in_progress">Đang làm</string>
+    <string name="label_language_system">Mặc định hệ thống</string>
+    <string name="msg_language_android_version">Thay đổi ngôn ngữ sẽ mở cài đặt hệ thống trên phiên bản Android này.</string>
+    <string name="error_pin_digits">PIN phải có 4 chữ số</string>
+
+    <!-- Reminder options -->
+    <string name="reminder_none">Không</string>
+    <string name="reminder_on_day">Trong ngày (09:00)</string>
+    <string name="reminder_1_day_before">1 ngày trước (09:00)</string>
+    <string name="reminder_2_days_before">2 ngày trước (09:00)</string>
+    <string name="reminder_1_week_before">1 tuần trước (09:00)</string>
+    <string name="reminder_1_month_before">1 tháng trước (09:00)</string>
+    <string name="reminder_custom">Tùy chỉnh</string>
+    <string name="label_custom_reminder">Nhắc nhở tùy chỉnh</string>
+    <string name="label_day">Ngày</string>
+    <string name="label_week">Tuần</string>
+    <string name="label_month">Tháng</string>
+    <string name="label_before">Trước</string>
+
+    <!-- Repeat options -->
+    <string name="repeat_daily">Hằng ngày</string>
+    <string name="repeat_weekly">Hằng tuần</string>
+    <string name="repeat_monthly">Hằng tháng</string>
+    <string name="repeat_yearly">Hằng năm</string>
+    <string name="label_custom_repeat">Lặp lại tùy chỉnh</string>
+    <string name="label_every">Mỗi</string>
+    <string name="label_year">Năm</string>
+
+    <!-- Days of week -->
+    <string name="day_sunday">Chủ nhật</string>
+    <string name="day_monday">Thứ hai</string>
+    <string name="day_tuesday">Thứ ba</string>
+    <string name="day_wednesday">Thứ tư</string>
+    <string name="day_thursday">Thứ năm</string>
+    <string name="day_friday">Thứ sáu</string>
+    <string name="day_saturday">Thứ bảy</string>
+
+    <!-- Focus mode -->
+    <string name="label_focus_mode_minimal">Tối giản</string>
+    <string name="label_focus_mode_clock">Hiển thị đồng hồ</string>
+    <string name="label_focus_mode_stopwatch">Đồng hồ bấm giờ</string>
+    <string name="label_focus_mode_timer">Hẹn giờ</string>
+
+    <!-- Passcode -->
+    <string name="label_remove_pin">Xóa mã PIN</string>
+    <string name="label_enter_pin_hint">Nhập mã PIN 4 chữ số</string>
+    <string name="label_enter_pin">Nhập mã PIN</string>
+    <string name="error_wrong_pin">Sai mã PIN</string>
+
+    <!-- Permissions -->
+    <string name="error_usage_permission_required">Vui lòng cấp quyền Truy cập sử dụng.</string>
+</resources>
